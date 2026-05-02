@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git branch *)",
+      "Bash(git init *)"
+    ],
+    "additionalDirectories": [
+      "f:\\code\\MAX"
+    ]
+  }
+}

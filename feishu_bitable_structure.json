@@ -1,0 +1,366 @@
+{
+  "base_token": "Mn6GbCSBearnCOs8RYscolBmnlc",
+  "tables": [
+    {
+      "name": "客户信息表",
+      "id": "tblIxjtaLphlbCnq",
+      "fields": [
+        {
+          "name": "客户姓名",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "联系电话",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "城市",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "户型面积",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "预算",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "来源渠道",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "意向等级",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "客户状态",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "标签",
+          "type": "Type(4)",
+          "type_id": 4
+        },
+        {
+          "name": "跟进人",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "创建时间",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "更新时间",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "备注",
+          "type": "Text",
+          "type_id": 1
+        }
+      ]
+    },
+    {
+      "name": "项目台账表",
+      "id": "tblMq9dKmxqok7Yd",
+      "fields": [
+        {
+          "name": "客户姓名",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "项目编号",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "项目地址",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "面积",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "风格",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "合同金额",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "已收款",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "未收款",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "项目状态",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "设计师",
+          "type": "MultiSelect",
+          "type_id": 11
+        },
+        {
+          "name": "施工班组",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "开工日期",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "预计完工日",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "实际完工日",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "备注",
+          "type": "Text",
+          "type_id": 1
+        }
+      ]
+    },
+    {
+      "name": "售后维保台账",
+      "id": "tbliy6uD9WeHBjY5",
+      "fields": [
+        {
+          "name": "客户姓名",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "项目编号",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "问题类型",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "问题描述",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "处理状态",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "优先级",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "提报人",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "处理人",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "提报日期",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "处理完成日期",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "客户满意度",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "备注",
+          "type": "Text",
+          "type_id": 1
+        }
+      ]
+    },
+    {
+      "name": "合同管理表",
+      "id": "tblYK0k9DL4rS8HX",
+      "fields": [
+        {
+          "name": "客户姓名",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "项目编号",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "合同类型",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "合同金额",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "已付金额",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "付款进度",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "签订日期",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "合同状态",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "备注",
+          "type": "Text",
+          "type_id": 1
+        }
+      ]
+    },
+    {
+      "name": "供应商表",
+      "id": "tblj0ggjNAUSnM6q",
+      "fields": [
+        {
+          "name": "供应商名称",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "联系人",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "联系电话",
+          "type": "Phone2",
+          "type_id": 13
+        },
+        {
+          "name": "供应品类",
+          "type": "Type(4)",
+          "type_id": 4
+        },
+        {
+          "name": "等级",
+          "type": "Number",
+          "type_id": 2
+        },
+        {
+          "name": "合作状态",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "备注",
+          "type": "Text",
+          "type_id": 1
+        }
+      ]
+    },
+    {
+      "name": "客户交互记录表",
+      "id": "tblGKolCVrikc94G",
+      "fields": [
+        {
+          "name": "客户姓名",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "项目编号",
+          "type": "Text2",
+          "type_id": 18
+        },
+        {
+          "name": "回访日期",
+          "type": "Date",
+          "type_id": 5
+        },
+        {
+          "name": "回访人",
+          "type": "MultiSelect",
+          "type_id": 11
+        },
+        {
+          "name": "回访方式",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "客户反馈",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "满意度",
+          "type": "Image",
+          "type_id": 3
+        },
+        {
+          "name": "跟进事项",
+          "type": "Text",
+          "type_id": 1
+        },
+        {
+          "name": "下次回访日期",
+          "type": "Date",
+          "type_id": 5
+        }
+      ]
+    }
+  ]
+}

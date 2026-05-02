@@ -1,0 +1,489 @@
+[
+  {
+    "name": "客户信息",
+    "id": "tbl6IdYFBB8RDFiO",
+    "fields": [
+      {
+        "name": "客户姓名",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "性别",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "联系方式",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "客户类型",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "客户来源",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "项目地址",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "类型",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "户型",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "面积",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "报价",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "设计费",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "录入人",
+        "type": "未知(1003)",
+        "type_id": 1003
+      },
+      {
+        "name": "部门",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "分派设计师",
+        "type": "多选",
+        "type_id": 11
+      },
+      {
+        "name": "录入时间",
+        "type": "日期",
+        "type_id": 5
+      },
+      {
+        "name": "跟进时间",
+        "type": "日期",
+        "type_id": 5
+      },
+      {
+        "name": "落单进度",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "服务阶段",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "备注",
+        "type": "文本",
+        "type_id": 1
+      }
+    ]
+  },
+  {
+    "name": "合同管理",
+    "id": "tblRS5zg0u5Hj6DN",
+    "fields": [
+      {
+        "name": "合同编号",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "签订日期",
+        "type": "日期",
+        "type_id": 5
+      },
+      {
+        "name": "客户姓名",
+        "type": "文本2",
+        "type_id": 18
+      },
+      {
+        "name": "项目地址",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "轻辅合同",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "主材合同额",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "直接费",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "产值",
+        "type": "自动编号",
+        "type_id": 20
+      },
+      {
+        "name": "预估利润",
+        "type": "自动编号",
+        "type_id": 20
+      },
+      {
+        "name": "盈余",
+        "type": "自动编号",
+        "type_id": 20
+      },
+      {
+        "name": "支出",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "设计费",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "付款比例",
+        "type": "自动编号",
+        "type_id": 20
+      },
+      {
+        "name": "已付款",
+        "type": "自动编号",
+        "type_id": 20
+      },
+      {
+        "name": "剩余款",
+        "type": "自动编号",
+        "type_id": 20
+      },
+      {
+        "name": "首期款",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "中期款",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "尾期款",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "主材款",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "增减项",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "设计师",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "备注",
+        "type": "文本",
+        "type_id": 1
+      }
+    ]
+  },
+  {
+    "name": "合作商",
+    "id": "tblnKdukg33OfUsN",
+    "fields": [
+      {
+        "name": "姓名",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "联系电话",
+        "type": "电话2",
+        "type_id": 13
+      },
+      {
+        "name": "邮箱地址",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "合作类型",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "品牌/工种",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "供应产品",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "报价清单",
+        "type": "关联",
+        "type_id": 15
+      },
+      {
+        "name": "合作评分",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "合作等级",
+        "type": "图片",
+        "type_id": 3
+      }
+    ]
+  },
+  {
+    "name": "支出明细",
+    "id": "tbl2X6WH1RuCwBM3",
+    "fields": [
+      {
+        "name": "日期",
+        "type": "日期",
+        "type_id": 5
+      },
+      {
+        "name": "合同编号",
+        "type": "文本2",
+        "type_id": 18
+      },
+      {
+        "name": "项目地址",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "支出明细",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "往来单位",
+        "type": "文本2",
+        "type_id": 18
+      },
+      {
+        "name": "联系方式",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "客户姓名",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "支出",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "备注",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "附件",
+        "type": "公式",
+        "type_id": 17
+      }
+    ]
+  },
+  {
+    "name": "收入明细",
+    "id": "tbl6WFZYHS19JHKk",
+    "fields": [
+      {
+        "name": "编号",
+        "type": "日期",
+        "type_id": 5
+      },
+      {
+        "name": "合同编号",
+        "type": "文本2",
+        "type_id": 18
+      },
+      {
+        "name": "项目地址",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "首期款",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "中期款",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "尾期款",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "主材款",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "设计费",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "增减项",
+        "type": "数字",
+        "type_id": 2
+      },
+      {
+        "name": "收入总和",
+        "type": "自动编号",
+        "type_id": 20
+      },
+      {
+        "name": "客户姓名",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "联系方式",
+        "type": "未知(19)",
+        "type_id": 19
+      },
+      {
+        "name": "备注",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "附件",
+        "type": "公式",
+        "type_id": 17
+      }
+    ]
+  },
+  {
+    "name": "施工管理",
+    "id": "tblLBj0GQik63K9W",
+    "fields": [
+      {
+        "name": "施工节点",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "文本 2",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "执行人",
+        "type": "多选",
+        "type_id": 11
+      },
+      {
+        "name": "完结",
+        "type": "电话",
+        "type_id": 7
+      },
+      {
+        "name": "任务",
+        "type": "未知(21)",
+        "type_id": 21
+      },
+      {
+        "name": "任务 2",
+        "type": "未知(21)",
+        "type_id": 21
+      },
+      {
+        "name": "日期",
+        "type": "日期",
+        "type_id": 5
+      },
+      {
+        "name": "日期 2",
+        "type": "日期",
+        "type_id": 5
+      }
+    ]
+  },
+  {
+    "name": "任务",
+    "id": "tblZA6hpoSVUbfTm",
+    "fields": [
+      {
+        "name": "施工节点",
+        "type": "文本",
+        "type_id": 1
+      },
+      {
+        "name": "分类",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "工种",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "预埋",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "采购",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "污染",
+        "type": "图片",
+        "type_id": 3
+      },
+      {
+        "name": "J298进度",
+        "type": "未知(21)",
+        "type_id": 21
+      }
+    ]
+  }
+]

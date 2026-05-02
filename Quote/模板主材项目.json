@@ -1,0 +1,205 @@
+[
+  {
+    "name": "设备",
+    "unit_price": 2500.0,
+    "unit": "项",
+    "remark": "空调",
+    "brand": "美的"
+  },
+  {
+    "name": "封阳台/阳光房/外门窗",
+    "unit_price": 1000.0,
+    "unit": "平方米",
+    "remark": "",
+    "brand": ""
+  },
+  {
+    "name": "特殊线路改造\n（安防、监控等）",
+    "unit_price": 580.0,
+    "unit": "项",
+    "remark": "安防、监控、可视电话",
+    "brand": "入\n智能\n系统"
+  },
+  {
+    "name": "角阀",
+    "unit_price": 65.0,
+    "unit": "个",
+    "remark": "",
+    "brand": "潜水艇"
+  },
+  {
+    "name": "浴缸+龙头1.4米",
+    "unit_price": 10800.0,
+    "unit": "套",
+    "remark": "",
+    "brand": "浪鲸"
+  },
+  {
+    "name": "淋浴花洒",
+    "unit_price": 2500.0,
+    "unit": "套",
+    "remark": "",
+    "brand": "浪鲸"
+  },
+  {
+    "name": "淋浴房90*90钻石",
+    "unit_price": 4500.0,
+    "unit": "套",
+    "remark": "",
+    "brand": "浪鲸"
+  },
+  {
+    "name": "智能坐便",
+    "unit_price": 4500.0,
+    "unit": "套",
+    "remark": "",
+    "brand": "浪鲸"
+  },
+  {
+    "name": "拖把池、龙头",
+    "unit_price": 100.0,
+    "unit": "套",
+    "remark": "",
+    "brand": "网购"
+  },
+  {
+    "name": "卫浴线型风暖",
+    "unit_price": 2100.0,
+    "unit": "套",
+    "remark": "配齐相关配件",
+    "brand": "奥华"
+  },
+  {
+    "name": "卫浴排风",
+    "unit_price": 650.0,
+    "unit": "套",
+    "remark": "配齐相关配件",
+    "brand": "奥华"
+  },
+  {
+    "name": "卫浴线条灯",
+    "unit_price": 168.0,
+    "unit": "米",
+    "remark": "配齐相关配件",
+    "brand": "奥华"
+  },
+  {
+    "name": "壁灯",
+    "unit_price": 350.0,
+    "unit": "台",
+    "remark": "配齐相关配件",
+    "brand": "网购"
+  },
+  {
+    "name": "晾衣架（隐藏式）",
+    "unit_price": 1050.0,
+    "unit": "套",
+    "remark": "配齐相关配件",
+    "brand": "奥华"
+  },
+  {
+    "name": "电子壁炉0.8米",
+    "unit_price": 2600.0,
+    "unit": "套",
+    "remark": "配齐相关配件",
+    "brand": "网购"
+  },
+  {
+    "name": "厨房墙砖0.9*1.8",
+    "unit_price": 330.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "公卫墙砖0.75*1.5",
+    "unit_price": 158.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "公卫地砖0.75*1.5",
+    "unit_price": 158.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "主卫墙砖0.6*1.2",
+    "unit_price": 88.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "主卫地砖0.6*1.2",
+    "unit_price": 88.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "女儿房卫生间墙砖0.75*1.5",
+    "unit_price": 158.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "女儿房卫生间地砖0.75*1.5",
+    "unit_price": 158.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "地砖0.9*1.8",
+    "unit_price": 330.0,
+    "unit": "块",
+    "remark": "",
+    "brand": "东鹏\n蒙娜丽莎"
+  },
+  {
+    "name": "瓷砖运输",
+    "unit_price": 1800.0,
+    "unit": "项",
+    "remark": "",
+    "brand": ""
+  },
+  {
+    "name": "地漏",
+    "unit_price": 188.0,
+    "unit": "个",
+    "remark": "",
+    "brand": "杜纳特\n潜水艇"
+  },
+  {
+    "name": "止逆阀",
+    "unit_price": 258.0,
+    "unit": "个",
+    "remark": "",
+    "brand": "潜水艇"
+  },
+  {
+    "name": "铝扣板",
+    "unit_price": 230.0,
+    "unit": "平方米",
+    "remark": "",
+    "brand": "奥华"
+  },
+  {
+    "name": "窗台板大理石",
+    "unit_price": 200.0,
+    "unit": "米",
+    "remark": "天然大理石",
+    "brand": "欧艺石材"
+  },
+  {
+    "name": "保洁",
+    "unit_price": 193.0,
+    "unit": "平方米",
+    "remark": "",
+    "brand": ""
+  }
+]
