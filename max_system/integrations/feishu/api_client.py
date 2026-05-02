@@ -306,6 +306,19 @@ class FeishuApiClient:
         self._field_cache.set(table_id, mapping)
         return mapping
 
+    # ============ 消息操作 ============
+
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def delete_message(self, message_id: str) -> dict:
+        """删除飞书消息"""
+        headers = await self._headers()
+        resp = await self._http.delete(
+            f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}",
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     # ============ 审批 ============
 
     async def create_approval(

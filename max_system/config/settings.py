@@ -31,15 +31,18 @@ class MaxSettings(BaseSettings):
     feishu_encrypt_key: str = ""
     feishu_bitable_app_token: str = ""
 
-    # 多维表格各表ID（由 init_bitable.py 创建后填入)
-    bitable_table_clients: str = "tblIxjtaLphlbCnq"     # 客户信息表
-    bitable_table_projects: str = "tblMq9dKmxqok7Yd"    # 项目台账表
-    bitable_table_after_sales: str = "tbliy6uD9WeHBjY5" # 售后维保台账
-    bitable_table_contracts: str = "tblYK0k9DL4rS8HX"   # 合同管理表
-    bitable_table_suppliers: str = "tblj0ggjNAUSnM6q"   # 供应商表
-    bitable_table_visits: str = "tblGKolCVrikc94G"      # 回访记录表
-    bitable_table_followups: str = "tbljvs4iKtp6GJMA"   # 跟进记录表
-    bitable_table_accounting: str = "tblavuqWrGIY6JUr"  # 谈单账目表
+    # 多维表格各表ID
+    # 线上已有表
+    bitable_table_clients: str = "tbl6IdYFBB8RDFiO"        # 客户信息
+    bitable_table_contracts: str = "tblRS5zg0u5Hj6DN"      # 合同管理
+    bitable_table_suppliers: str = "tblnKdukg33OfUsN"      # 合作商
+    bitable_table_expense: str = "tbl2X6WH1RuCwBM3"        # 支出明细
+    bitable_table_income: str = "tbl6WFZYHS19JHKk"         # 收入明细
+    bitable_table_construction: str = "tblLBj0GQik63K9W"   # 施工管理
+    bitable_table_tasks: str = "tblZA6hpoSVUbfTm"           # 任务
+    # 待新建表（init_bitable.py 创建后填入）
+    bitable_table_after_sales: str = ""                     # 售后维保台账
+    bitable_table_followups: str = ""                       # 跟进记录表（回访+跟进合并）
 
     # Obsidian
     obsidian_vault_path: Path = Path("M:/ObsidianVault/斑马精装")

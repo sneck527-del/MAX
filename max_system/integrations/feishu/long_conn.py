@@ -76,9 +76,17 @@ class FeishuLongConn:
     def _handle_message_event(self, data, **kwargs):
         """处理飞书消息接收事件（同步回调）"""
         try:
+            logger.info("========== 收到飞书事件回调 ==========")
+            logger.info("data type: %s", type(data).__name__)
+
             event_data = data.event if hasattr(data, 'event') else data
+            logger.info("event_data type: %s, has event attr: %s",
+                       type(event_data).__name__, hasattr(data, 'event'))
+
             message = event_data.message if hasattr(event_data, 'message') else {}
             sender = event_data.sender if hasattr(event_data, 'sender') else {}
+            logger.info("message type: %s, sender type: %s",
+                       type(message).__name__, type(sender).__name__)
 
             chat_id = message.chat_id if hasattr(message, 'chat_id') else ""
             chat_type = message.chat_type if hasattr(message, 'chat_type') else "p2p"
@@ -94,6 +102,10 @@ class FeishuLongConn:
             mentions = message.mentions if hasattr(message, 'mentions') else []
             is_mentioned = bool(mentions)
 
+            logger.info("收到飞书消息: chat=%s, type=%s, text=%s, mentioned=%s",
+                       chat_id[:10] if chat_id else "N/A", message_type,
+                       text[:80] if text else "(空)", is_mentioned)
+
             payload = {
                 "chat_id": chat_id,
                 "user_id": user_id,
@@ -105,12 +117,10 @@ class FeishuLongConn:
                 "is_mentioned": is_mentioned,
             }
 
-            logger.info("收到飞书消息: chat=%s, type=%s, text=%s",
-                       chat_id[:10] if chat_id else "N/A", message_type, text[:50])
-
             # 在主事件循环中调度异步回调
             if self._main_loop and not self._main_loop.is_closed():
                 asyncio.run_coroutine_threadsafe(self.on_message(payload), self._main_loop)
+                logger.info("已调度消息到主事件循环")
             else:
                 logger.warning("主事件循环不可用，跳过消息处理")
 

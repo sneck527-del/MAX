@@ -44,6 +44,23 @@ class LLMClient:
     def provider_name(self) -> str:
         return self.provider
 
+    @staticmethod
+    def _sanitize(obj: object) -> object:
+        """移除字符串中的 surrogate 字符，避免 httpx 序列化异常"""
+        if isinstance(obj, str):
+            result = []
+            for c in obj:
+                if "\ud800" <= c <= "\udfff":
+                    result.append("�")
+                else:
+                    result.append(c)
+            return "".join(result)
+        if isinstance(obj, dict):
+            return {k: LLMClient._sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [LLMClient._sanitize(v) for v in obj]
+        return obj
+
     async def chat(
         self,
         messages: list[dict],
@@ -59,9 +76,10 @@ class LLMClient:
             "max_tokens": max_tokens or self.settings.llm_max_tokens,
         }
         if tools:
-            kwargs["tools"] = tools
+            kwargs["tools"] = LLMClient._sanitize(tools)
             kwargs["tool_choice"] = "auto"
 
+        kwargs["messages"] = LLMClient._sanitize(messages)
         response = await self._client.chat.completions.create(**kwargs)
         return response
 

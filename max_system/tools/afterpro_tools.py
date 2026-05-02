@@ -22,25 +22,26 @@ _api_client: Any = None
 # ============ 字段名映射（内部key ↔ 售后维保台账bitable字段）============
 
 ISSUE_TO_BITABLE = {
-    "问题编号": "问题编号",
-    "项目": "项目名称",
+    "问题编号": "合同编号",
+    "项目": "合同编号",
     "问题描述": "问题描述",
     "严重程度": "优先级",
-    "责任判定": "责任判定",
-    "处理时限": "处理时限",
-    "联系人": "客户姓名",
+    "责任判定": "提报人",
+    "处理时限": "处理人",
     "状态": "处理状态",
     "创建时间": "提报日期",
 }
 BITABLE_TO_ISSUE = {v: k for k, v in ISSUE_TO_BITABLE.items()}
 
-VISIT_TO_BITABLE = {
-    "项目": "项目名称",
-    "客户": "客户姓名",
-    "回访类型": "回访方式",
-    "计划日期": "回访日期",
+FOLLOWUP_TO_BITABLE = {
+    "项目": "合同编号",
+    "记录类型": "记录类型",
+    "计划日期": "跟进时间",
+    "方式": "跟进方式",
+    "内容": "跟进内容",
     "特别备注": "跟进事项",
-    "创建时间": "创建时间",
+    "下次日期": "下次跟进时间",
+    "状态": "状态",
 }
 
 
@@ -50,10 +51,10 @@ def _get_after_sales_table_id() -> str:
     return _settings.bitable_table_after_sales
 
 
-def _get_visit_table_id() -> str:
+def _get_followup_table_id() -> str:
     if _settings is None:
         raise RuntimeError("afterpro_tools 未初始化")
-    return _settings.bitable_table_visits
+    return _settings.bitable_table_followups
 
 
 def _ensure_api_client():
@@ -92,15 +93,15 @@ async def _sync_issue_to_bitable(issue: dict) -> str | None:
 
 
 async def _sync_visit_to_bitable(schedule: dict) -> None:
-    """同步回访计划到回访记录表"""
+    """同步回访计划到跟进记录表"""
     if not _settings or not _settings.feishu_bitable_app_token:
         return
     _ensure_api_client()
     if _api_client is None:
         return
 
-    table_id = _get_visit_table_id()
-    fields = {VISIT_TO_BITABLE.get(k, k): v for k, v in schedule.items() if v}
+    table_id = _get_followup_table_id()
+    fields = {FOLLOWUP_TO_BITABLE.get(k, k): v for k, v in schedule.items() if v}
     try:
         await _api_client.write_bitable(table_id, [fields])
     except Exception as e:
@@ -145,8 +146,8 @@ async def returnvisit_schedule(args: dict) -> dict:
 
     schedule = {
         "项目": project_name,
-        "客户": client_name,
-        "回访类型": visit_type,
+        "记录类型": "售后回访",
+        "方式": "电话",
         "计划日期": plan_date,
         "检查清单": checklist,
         "特别备注": special_notes or "无",
@@ -156,7 +157,7 @@ async def returnvisit_schedule(args: dict) -> dict:
             "小问题当场安排，大问题48小时内给方案",
             "结束时询问是否有转介绍意向",
         ],
-        "创建时间": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "状态": "待跟进",
     }
 
     # 同步到回访记录表
@@ -207,7 +208,6 @@ async def issuefix_track(args: dict) -> dict:
         "严重程度": severity,
         "责任判定": responsibility,
         "处理时限": deadline,
-        "联系人": contact,
         "处理流程": flow,
         "沟通话术": scripts,
         "状态": "待处理",

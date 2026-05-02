@@ -16,6 +16,10 @@ def setup_logging():
 
 
 def main():
+    # 修复Windows终端UTF-8输出
+    if sys.platform == "win32" and sys.stdout.encoding != "utf-8":
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     setup_logging()
     settings = get_settings()
 
@@ -120,6 +124,17 @@ async def _async_feishu():
     # 飞书API客户端（用于主动发消息）
     feishu_api = FeishuApiClient(settings)
 
+    async def _send_loading_indicator(chat_id: str) -> str | None:
+        """2秒后发送加载提示，返回消息ID以便后续删除"""
+        try:
+            await asyncio.sleep(2)
+            resp = await feishu_api.send_message(chat_id, "⏳ 思考中...")
+            return resp.get("data", {}).get("message_id", "")
+        except asyncio.CancelledError:
+            return None
+        except Exception:
+            return None
+
     # 消息处理回调
     async def handle_feishu_message(payload: dict):
         chat_id = payload.get("chat_id", "")
@@ -128,9 +143,19 @@ async def _async_feishu():
         user_id = payload.get("user_id", "")
         is_mentioned = payload.get("is_mentioned", False)
 
+        logger = logging.getLogger(__name__)
+        logger.info("========== 处理飞书消息 ==========")
+        logger.info("chat_id=%s chat_type=%s text=%s mentioned=%s",
+                   chat_id[:10] if chat_id else "N/A", chat_type,
+                   text[:50] if text else "(空)", is_mentioned)
+
         # 群聊未@机器人，不响应
         if chat_type == "group" and not is_mentioned:
+            logger.info("群聊未@机器人，忽略")
             return
+
+        # 2秒后显示加载提示
+        loading_task = asyncio.create_task(_send_loading_indicator(chat_id))
 
         try:
             # 会话上下文
@@ -143,6 +168,13 @@ async def _async_feishu():
                 text, session_id=chat_id, user_id=user_id,
                 history=history[:-1],  # 排除刚添加的当前消息
             )
+
+            # 取消加载提示
+            loading_task.cancel()
+            try:
+                await loading_task
+            except asyncio.CancelledError:
+                pass
 
             # 发送响应
             if response:
@@ -157,9 +189,14 @@ async def _async_feishu():
                         await asyncio.sleep(0.5)
 
         except Exception as e:
+            loading_task.cancel()
+            try:
+                await loading_task
+            except asyncio.CancelledError:
+                pass
             logging.getLogger(__name__).error("处理飞书消息失败: %s", e, exc_info=True)
             try:
-                await feishu_api.send_message(chat_id, f"处理异常，请稍后重试。")
+                await feishu_api.send_message(chat_id, "处理异常，请稍后重试。")
             except Exception:
                 pass
 

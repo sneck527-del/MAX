@@ -31,8 +31,16 @@ def print_banner(settings):
     print()
 
 
+def _fix_stdout_encoding():
+    """修复Windows终端UTF-8输出，避免emoji等字符编码错误"""
+    if sys.platform == "win32" and sys.stdout.encoding != "utf-8":
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+
 async def run_repl():
     """启动CLI交互循环"""
+    _fix_stdout_encoding()
     settings = get_settings()
 
     # 初始化审计存储
