@@ -7,7 +7,7 @@ import time
 
 from max_system.config.settings import get_settings
 from max_system.core.orchestrator import MaxOrchestrator
-from max_system.core.intent_router import IntentRouter
+from max_system.core.llm_client import LLMClient
 from max_system.audit.store import AuditStore
 from max_system.audit.logger import set_audit_store
 
@@ -19,12 +19,10 @@ def print_banner(settings):
     model = settings.llm_model if provider == "deepseek" else settings.ollama_model
     print()
     print("=" * 60)
-    print("  Max 多Agent室内设计AI助手系统  |  CLI 模式")
-    print("  斑马精装")
+    print("  Max 室内设计AI助手  |  CLI 模式")
     print("=" * 60)
     print(f"  LLM: {provider} / {model}")
     print(f"  飞书: {'已配置' if settings.feishu_app_id else '未配置'}")
-    print(f"  Obsidian: {settings.obsidian_vault_path}")
     print("  输入消息与Max对话，输入 /quit 退出")
     print("  输入 /help 查看帮助")
     print("=" * 60)
@@ -44,7 +42,7 @@ async def run_repl():
     settings = get_settings()
 
     # 初始化审计存储
-    audit_store = AuditStore(settings.audit_db_path)
+    audit_store = AuditStore(settings.get_db_path())
     await audit_store.initialize()
     set_audit_store(audit_store)
 
@@ -95,15 +93,12 @@ async def run_repl():
                 print("对话历史已清空\n")
                 continue
             elif user_input == "/model":
-                # 切换模型
                 print(f"当前: {orchestrator.llm.provider_name} / {orchestrator.llm.model}")
                 print("输入 deepseek 或 ollama 切换:")
                 try:
                     choice = input("  > ").strip()
                     if choice in ("deepseek", "ollama"):
-                        orchestrator.llm = __import__(
-                            "max_system.core.llm_client", fromlist=["LLMClient"]
-                        ).LLMClient(settings, provider=choice)
+                        orchestrator.llm = LLMClient(settings, provider=choice)
                         print(f"  已切换到: {orchestrator.llm.provider_name} / {orchestrator.llm.model}\n")
                 except (EOFError, KeyboardInterrupt):
                     pass
@@ -139,6 +134,7 @@ async def run_repl():
             print()
 
     finally:
+        await orchestrator.close()
         await audit_store.close()
 
 
@@ -153,7 +149,6 @@ def _print_help():
 
 对话说明:
   直接输入消息与Max对话
-  Max会自动调度Talker/AfterPro/MediaPro/Helper处理
   示例:
     "帮我分析一下新客户张先生的需求"
     "写一篇小红书文案"
@@ -165,8 +160,6 @@ def _print_status(orchestrator: MaxOrchestrator):
     print(f"""
 系统状态:
   LLM: {orchestrator.llm.provider_name} / {orchestrator.llm.model}
-  Agent数: {len(orchestrator.agent_prompts)}
   工具数: {len(orchestrator._tools)}
-  已注册Agent: {', '.join(orchestrator.agent_prompts.keys())}
   已注册工具: {', '.join(orchestrator._tools.keys())}
 """)

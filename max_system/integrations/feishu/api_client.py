@@ -1,5 +1,6 @@
 """飞书API客户端：封装lark-oapi SDK调用"""
 
+import json
 import logging
 from typing import Any
 
@@ -362,6 +363,117 @@ class FeishuApiClient:
                 "start_time": {"timestamp": start_time},
                 "end_time": {"timestamp": end_time},
             },
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_calendar_events(
+        self,
+        calendar_id: str,
+        start_time: str = "",
+        end_time: str = "",
+        page_size: int = 50,
+        page_token: str = "",
+    ) -> dict:
+        """查询日历事件"""
+        headers = await self._headers()
+        params: dict[str, Any] = {"page_size": page_size}
+        if start_time:
+            params["start_time"] = start_time
+        if end_time:
+            params["end_time"] = end_time
+        if page_token:
+            params["page_token"] = page_token
+        resp = await self._http.get(
+            f"https://open.feishu.cn/open-apis/calendar/v4/calendars/{calendar_id}/events",
+            headers=headers,
+            params=params,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_calendar_event(self, calendar_id: str, event_id: str) -> dict:
+        """删除日历事件"""
+        headers = await self._headers()
+        resp = await self._http.delete(
+            f"https://open.feishu.cn/open-apis/calendar/v4/calendars/{calendar_id}/events/{event_id}",
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    # ============ 任务 ============
+
+    async def create_task(
+        self,
+        summary: str,
+        description: str = "",
+        due_time: str = "",
+        reminders: list[dict] | None = None,
+    ) -> dict:
+        """创建飞书任务（待办事项）
+
+        reminders: [{"relative_fire_minute": 30}]  提前30分钟提醒
+        """
+        headers = await self._headers()
+        body: dict[str, Any] = {"summary": summary, "description": description}
+        if due_time:
+            body["due"] = {"time": due_time}
+        if reminders:
+            body["reminders"] = reminders
+        resp = await self._http.post(
+            "https://open.feishu.cn/open-apis/task/v1/tasks",
+            headers=headers,
+            json=body,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_tasks(
+        self,
+        start_time: str = "",
+        end_time: str = "",
+        status: str = "",
+        page_size: int = 50,
+        page_token: str = "",
+    ) -> dict:
+        """查询飞书任务列表"""
+        headers = await self._headers()
+        params: dict[str, Any] = {"page_size": page_size}
+        if start_time:
+            params["start_time"] = start_time
+        if end_time:
+            params["end_time"] = end_time
+        if status:
+            params["status"] = status
+        if page_token:
+            params["page_token"] = page_token
+        resp = await self._http.get(
+            "https://open.feishu.cn/open-apis/task/v1/tasks",
+            headers=headers,
+            params=params,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def complete_task(self, task_id: str) -> dict:
+        """完成任务"""
+        headers = await self._headers()
+        resp = await self._http.patch(
+            f"https://open.feishu.cn/open-apis/task/v1/tasks/{task_id}/complete",
+            headers=headers,
+            json={},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def add_task_reminder(self, task_id: str, relative_fire_minute: int = 30) -> dict:
+        """给任务添加提醒"""
+        headers = await self._headers()
+        resp = await self._http.post(
+            f"https://open.feishu.cn/open-apis/task/v1/tasks/{task_id}/reminders",
+            headers=headers,
+            content=json.dumps({"relative_fire_minute": relative_fire_minute}).encode("utf-8"),
         )
         resp.raise_for_status()
         return resp.json()

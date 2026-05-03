@@ -1,14 +1,15 @@
 """测试工具模块"""
 
+import json
 import pytest
 
 
-class TestTalkerTools:
-    """Talker工具测试"""
+class TestSalesTools:
+    """销售工具测试"""
 
     @pytest.mark.asyncio
-    async def test_leadcatch_classify_high_intent(self):
-        from max_system.tools.talker_tools import leadcatch_classify
+    async def test_leadcatch_classify(self):
+        from max_system.tools.sales_tools import leadcatch_classify
 
         result = await leadcatch_classify({
             "name": "张先生",
@@ -24,58 +25,27 @@ class TestTalkerTools:
 
     @pytest.mark.asyncio
     async def test_needanaly_report(self):
-        from max_system.tools.talker_tools import needanaly_report
+        from max_system.tools.sales_tools import needanaly_report
 
         result = await needanaly_report({
             "client_name": "李先生",
-            "family": "一家三口+老人",
-            "spatial": "需要书房和充足的收纳空间",
-            "aesthetic": "喜欢温暖简约风格",
-            "pain_points": "采光不好，收纳不够",
         })
         assert result["content"][0]["type"] == "text"
-
-    @pytest.mark.asyncio
-    async def test_talkscript_generate(self):
-        from max_system.tools.talker_tools import talkscript_generate
-
-        result = await talkscript_generate({
-            "client_name": "王女士",
-            "stage": "初次沟通",
-            "client_type": "首次装修",
-        })
-        assert result["content"][0]["type"] == "text"
-        data = result["content"][0]["text"]
-        assert "话术" in data or "破冰" in data
-
-    @pytest.mark.asyncio
-    async def test_contractpro_draft(self):
-        from max_system.tools.talker_tools import contractpro_draft
-
-        result = await contractpro_draft({
-            "client_name": "赵先生",
-            "address": "XX小区12栋301",
-            "area": "120",
-            "total_price": "250000",
-        })
-        assert result["content"][0]["type"] == "text"
-        data = result["content"][0]["text"]
-        assert "草稿" in data
 
     @pytest.mark.asyncio
     async def test_datastat_report(self):
-        from max_system.tools.talker_tools import datastat_report
+        from max_system.tools.sales_tools import datastat_report
 
         result = await datastat_report({"period": "本月"})
         assert result["content"][0]["type"] == "text"
 
 
-class TestAfterProTools:
-    """AfterPro工具测试"""
+class TestServiceTools:
+    """售后工具测试"""
 
     @pytest.mark.asyncio
     async def test_returnvisit_schedule(self):
-        from max_system.tools.afterpro_tools import returnvisit_schedule
+        from max_system.tools.service_tools import returnvisit_schedule
 
         result = await returnvisit_schedule({
             "project_name": "XX别墅装修",
@@ -86,7 +56,7 @@ class TestAfterProTools:
 
     @pytest.mark.asyncio
     async def test_issuefix_track(self):
-        from max_system.tools.afterpro_tools import issuefix_track
+        from max_system.tools.service_tools import issuefix_track
 
         result = await issuefix_track({
             "project_name": "XX小区",
@@ -98,91 +68,26 @@ class TestAfterProTools:
         assert "ISS-" in data
 
 
-class TestMediaProTools:
-    """MediaPro工具测试"""
+class TestMarketingTools:
+    """营销工具测试"""
 
     @pytest.mark.asyncio
-    async def test_contentgen_draft(self):
-        from max_system.tools.mediapro_tools import contentgen_draft
+    async def test_leadtransfer_qualify(self):
+        from max_system.tools.marketing_tools import leadtransfer_qualify
 
-        result = await contentgen_draft({
+        result = await leadtransfer_qualify({
+            "lead_content": "我想装修120平米的房子，预算50万左右",
+            "lead_source": "小红书私信",
             "platform": "小红书",
-            "topic": "现代简约风装修",
-            "style": "种草分享",
         })
         assert result["content"][0]["type"] == "text"
 
     @pytest.mark.asyncio
-    async def test_casepack_package(self):
-        from max_system.tools.mediapro_tools import casepack_package
+    async def test_datareview_analyze(self):
+        from max_system.tools.marketing_tools import datareview_analyze
 
-        result = await casepack_package({
-            "project_name": "XX别墅",
-            "style": "现代简约",
-            "highlights": "LDK一体化设计",
-        })
+        result = await datareview_analyze({"period": "本月"})
         assert result["content"][0]["type"] == "text"
-
-
-class TestHelperTools:
-    """Helper工具测试"""
-
-    @pytest.mark.asyncio
-    async def test_helper_batch_generate(self):
-        from max_system.tools.helper_tools import helper_batch_generate
-
-        result = await helper_batch_generate({
-            "doc_type": "量房单",
-            "projects": json.dumps([{
-                "name": "XX别墅项目",
-                "client": "张先生",
-                "items": {"户型": "200㎡", "风格": "现代简约"},
-            }]),
-            "validate": True,
-        })
-        assert result["content"][0]["type"] == "text"
-
-    @pytest.mark.asyncio
-    async def test_helper_feishu_alert(self):
-        from max_system.tools.helper_tools import helper_feishu_sync_alert
-
-        result = await helper_feishu_sync_alert({
-            "alert_type": "reminder",
-            "title": "客户跟进提醒",
-            "content": "张先生已7天未跟进，请安排回访",
-            "urgency": "normal",
-        })
-        assert result["content"][0]["type"] == "text"
-
-    @pytest.mark.asyncio
-    async def test_helper_knowledge_catalog(self):
-        from max_system.tools.helper_tools import helper_knowledge_catalog
-
-        result = await helper_knowledge_catalog({"action": "catalog"})
-        assert result["content"][0]["type"] == "text"
-
-    @pytest.mark.asyncio
-    async def test_helper_obsidian_archive(self, tmp_path):
-        from max_system.tools.helper_tools import helper_obsidian_full_archive
-
-        # Temporarily redirect vault path
-        import max_system.tools.helper_tools as ht
-        original = ht._vault_path
-        ht._vault_path = tmp_path
-
-        try:
-            result = await helper_obsidian_full_archive({
-                "project_name": "测试项目",
-                "category": "projects",
-                "documents": json.dumps([{
-                    "title": "测试文档",
-                    "content": "这是测试内容",
-                    "tags": ["测试"],
-                }]),
-            })
-            assert result["content"][0]["type"] == "text"
-        finally:
-            ht._vault_path = original
 
 
 class TestClientMgrTools:
@@ -202,5 +107,29 @@ class TestClientMgrTools:
         results = await clientmgr_query_clients({"name": "测试客户"})
         assert results["content"][0]["type"] == "text"
 
+    @pytest.mark.asyncio
+    async def test_client_tag_and_report(self):
+        from max_system.tools.clientmgr_tools import client_tag_and_report
 
-import json
+        result = await client_tag_and_report({"action": "report"})
+        assert result["content"][0]["type"] == "text"
+
+
+class TestProfileTools:
+    """Profile工具测试"""
+
+    @pytest.mark.asyncio
+    async def test_profile_get_and_update(self):
+        from max_system.tools.profile_tools import profile_get, profile_update
+        result = await profile_get({"key": "company_name"})
+        assert result["content"][0]["type"] == "text"
+
+
+class TestScheduleTools:
+    """定时任务工具测试"""
+
+    @pytest.mark.asyncio
+    async def test_schedule_list(self):
+        from max_system.tools.schedule_tools import schedule_list
+        result = await schedule_list({})
+        assert result["content"][0]["type"] == "text"

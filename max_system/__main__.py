@@ -3,8 +3,7 @@
 import asyncio
 import logging
 import sys
-
-from max_system.config.settings import get_settings
+from pathlib import Path
 
 
 def setup_logging():
@@ -16,30 +15,174 @@ def setup_logging():
 
 
 def main():
-    # 修复Windows终端UTF-8输出
     if sys.platform == "win32" and sys.stdout.encoding != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     setup_logging()
-    settings = get_settings()
 
-    mode = "feishu"  # 默认：飞书长连接模式
     args = sys.argv[1:]
+    mode = None
     if args:
         first = args[0]
         if first in ("cli", "--cli", "-i"):
             mode = "cli"
-        elif first in ("webhook", "--webhook", "-w"):
-            mode = "webhook"
         elif first in ("feishu", "--feishu", "-f"):
             mode = "feishu"
+        elif first in ("init", "--init"):
+            asyncio.run(_run_init())
+            return
+
+    if mode is None:
+        mode = "feishu"
 
     if mode == "cli":
         _run_cli()
-    elif mode == "webhook":
-        _run_webhook()
     else:
         _run_feishu()
+
+
+async def _run_init():
+    """初始化Max系统：检测连接、创建Bitable表、初始化数据库"""
+    from max_system.config.bitable_schema import BITABLE_TABLES
+    from max_system.config.settings import get_settings
+
+    settings = get_settings()
+    print("=" * 60)
+    print("  Max 系统初始化")
+    print("=" * 60)
+
+    # Step 1: 检查.env
+    env_path = Path(".env")
+    if not env_path.exists():
+        print("\n未找到 .env 文件。请先配置以下信息：")
+        print("  LLM_API_KEY=你的DeepSeek_API_Key")
+        print("  FEISHU_APP_ID=cli_xxxxx")
+        print("  FEISHU_APP_SECRET=xxxxx")
+        print("  FEISHU_BITABLE_APP_TOKEN=xxxxx")
+        print("\n正在创建 .env 文件...")
+        env_path.write_text(
+            "# Max 系统配置文件\n"
+            "LLM_API_KEY=\n"
+            "FEISHU_APP_ID=\n"
+            "FEISHU_APP_SECRET=\n"
+            "FEISHU_BITABLE_APP_TOKEN=\n",
+            encoding="utf-8",
+        )
+        print("已创建 .env 模板，请编辑后重新运行 python -m max_system init")
+        return
+
+    # Step 2: 检测LLM连接
+    print("\n[1/4] 检测LLM连接...")
+    if settings.llm_api_key:
+        from max_system.core.llm_client import LLMClient
+        llm = LLMClient(settings)
+        conn = await llm.test_connection()
+        if conn["connected"]:
+            print(f"  LLM连接成功: {conn['provider']}/{conn['model']}")
+        else:
+            print(f"  LLM连接失败: {conn.get('error', '')}")
+            print("  请检查 .env 中的 LLM_API_KEY 和 LLM_BASE_URL")
+    else:
+        print("  必须配置 LLM_API_KEY 才能使用Max，请在 .env 中设置")
+
+    # Step 3: 检测飞书连接
+    print("\n[2/4] 检测飞书连接...")
+    if settings.feishu_app_id and settings.feishu_app_secret:
+        from max_system.integrations.feishu.api_client import FeishuApiClient
+        try:
+            feishu = FeishuApiClient(settings)
+            token = await feishu._get_tenant_token()
+            if token:
+                print(f"  飞书连接成功")
+            else:
+                print("  飞书连接失败：无法获取token")
+        except Exception as e:
+            print(f"  飞书连接失败: {e}")
+    else:
+        print("  必须配置 FEISHU_APP_ID 和 FEISHU_APP_SECRET 才能使用飞书功能")
+
+    # Step 4: 创建Bitable表
+    print("\n[3/4] 创建飞书多维表格...")
+    env_updates = {}
+    if settings.feishu_bitable_app_token and settings.feishu_app_id:
+        from max_system.integrations.feishu.api_client import FeishuApiClient
+        try:
+            feishu = FeishuApiClient(settings)
+            existing = await feishu.list_bitable_tables()
+            existing_names = {t["name"]: t["table_id"] for t in existing}
+
+            for table_def in BITABLE_TABLES:
+                name = table_def["name"]
+                env_key = table_def["env_key"]
+                if name in existing_names:
+                    tid = existing_names[name]
+                    print(f"  [跳过] {name}（已存在）")
+                    env_updates[env_key] = tid
+                else:
+                    print(f"  [创建] {name} ...", end=" ", flush=True)
+                    try:
+                        resp = await feishu.create_bitable_table(name)
+                        tid = resp.get("data", {}).get("table_id", "")
+                        if tid:
+                            print(f"成功")
+                            env_updates[env_key] = tid
+                            new_fields = table_def["fields"]
+                            if new_fields:
+                                try:
+                                    await feishu.batch_create_fields(tid, new_fields)
+                                    print(f"    字段创建完成 ({len(new_fields)}个)")
+                                except Exception as e:
+                                    print(f"    字段创建部分失败: {e}")
+                        else:
+                            print(f"失败: 返回无table_id")
+                    except Exception as e:
+                        print(f"失败: {e}")
+
+            await feishu.close()
+        except Exception as e:
+            print(f"  Bitable操作失败: {e}")
+    else:
+        print("  必须配置 FEISHU_BITABLE_APP_TOKEN 才能创建多维表格")
+
+    # 自动写入.env
+    if env_updates:
+        if not env_path.exists():
+            env_path.write_text("", encoding="utf-8")
+        try:
+            from dotenv import set_key
+            for key, val in env_updates.items():
+                set_key(str(env_path), key.upper(), val)
+            print(f"\n  已自动写入 {len(env_updates)} 个表ID到 .env 文件")
+        except ImportError:
+            print("\n  请将以下值手动写入 .env 文件：")
+            for key, val in env_updates.items():
+                print(f"    {key}={val}")
+
+    # Step 5: 初始化本地数据库
+    print("\n[4/4] 初始化本地数据库...")
+    from max_system.config.profile import ProfileManager
+    from max_system.audit.store import AuditStore
+
+    db_path = settings.get_db_path()
+    try:
+        profile = ProfileManager(db_path)
+        await profile.initialize()
+        await profile.close()
+
+        audit = AuditStore(db_path)
+        await audit.initialize()
+        await audit.close()
+
+        print(f"  数据库已初始化: {db_path}")
+    except Exception as e:
+        print(f"  数据库初始化失败: {e}")
+
+    print("\n" + "=" * 60)
+    print("  初始化完成!")
+    print("=" * 60)
+    print("\n下一步：")
+    print("  python -m max_system      启动飞书模式（默认）")
+    print("  python -m max_system cli  启动CLI测试模式")
 
 
 def _run_cli():
@@ -52,42 +195,47 @@ async def _async_cli():
     await run_repl()
 
 
-def _run_webhook():
-    """Webhook服务模式"""
-    import uvicorn
-    settings = get_settings()
-    logger = logging.getLogger(__name__)
-
-    logger.info("=" * 60)
-    logger.info("  Max 多Agent室内设计AI助手系统  |  Webhook模式")
-    logger.info("=" * 60)
-
-    from max_system.api.app import create_app
-    app = create_app()
-
-    uvicorn.run(app, host=settings.webhook_host, port=settings.webhook_port, log_level="info")
-
-
 def _run_feishu():
     """飞书长连接模式（默认）"""
+    from max_system.config.settings import get_settings
     settings = get_settings()
-    logger = logging.getLogger(__name__)
+
+    env_path = Path(".env")
+    if not env_path.exists():
+        print("错误: 未找到 .env 文件。")
+        print("请先运行 python -m max_system init 初始化系统。")
+        return
+
+    if not settings.llm_api_key:
+        print("错误: LLM_API_KEY 未配置。")
+        print("请在 .env 中设置 LLM_API_KEY 后重试。")
+        return
 
     print("=" * 60)
-    print("  Max 多Agent室内设计AI助手系统  |  飞书长连接模式")
-    print("  斑马精装")
+    print("  Max 室内设计AI助手  |  飞书长连接模式")
     print("=" * 60)
     print(f"  LLM: {settings.llm_provider} / {settings.llm_model}")
-    print(f"  飞书App ID: {settings.feishu_app_id[:10]}...")
-    print(f"  Obsidian: {settings.obsidian_vault_path}")
+    print(f"  飞书App ID: {settings.feishu_app_id[:10] if settings.feishu_app_id else 'N/A'}...")
     print("=" * 60)
 
     asyncio.run(_async_feishu())
 
 
+async def _on_schedule_trigger(job: dict, feishu_api, orchestrator):
+    """定时任务触发回调：通过飞书推送提醒"""
+    chat_id = job.get("chat_id", "")
+    description = job.get("description", "")
+
+    if chat_id:
+        try:
+            msg = f"提醒：{description}"
+            await feishu_api.send_message(chat_id, msg)
+        except Exception as e:
+            logging.getLogger(__name__).error("定时任务推送失败: %s", e)
+
+
 async def _async_feishu():
     """飞书长连接异步主循环"""
-    import time
     from max_system.config.settings import get_settings
     from max_system.core.orchestrator import MaxOrchestrator
     from max_system.core.session_manager import SessionManager
@@ -99,7 +247,7 @@ async def _async_feishu():
     settings = get_settings()
 
     # 初始化审计
-    audit_store = AuditStore(settings.audit_db_path)
+    audit_store = AuditStore(settings.get_db_path())
     await audit_store.initialize()
     set_audit_store(audit_store)
 
@@ -123,6 +271,20 @@ async def _async_feishu():
 
     # 飞书API客户端（用于主动发消息）
     feishu_api = FeishuApiClient(settings)
+
+    # 初始化定时任务调度器
+    scheduler = None
+    from max_system.tools.schedule_tools import get_scheduler, get_job_store
+    scheduler = get_scheduler()
+    if scheduler:
+        job_store = get_job_store()
+        if job_store:
+            await job_store.initialize()
+        scheduler.set_trigger_callback(
+            lambda job: _on_schedule_trigger(job, feishu_api, orchestrator)
+        )
+        await scheduler.start()
+        print("  定时任务调度器已启动")
 
     async def _send_loading_indicator(chat_id: str) -> str | None:
         """2秒后发送加载提示，返回消息ID以便后续删除"""
@@ -166,7 +328,7 @@ async def _async_feishu():
             # 调度到Max
             response = await orchestrator.dispatch(
                 text, session_id=chat_id, user_id=user_id,
-                history=history[:-1],  # 排除刚添加的当前消息
+                history=history[:-1],
             )
 
             # 取消加载提示
@@ -179,7 +341,6 @@ async def _async_feishu():
             # 发送响应
             if response:
                 session_manager.add_message(session, "assistant", response)
-                # 分段发送超长消息
                 max_len = 4000
                 if len(response) <= max_len:
                     await feishu_api.send_message(chat_id, response)
@@ -200,28 +361,29 @@ async def _async_feishu():
             except Exception:
                 pass
 
-    # 启动飞书长连接（在独立线程+独立事件循环中运行）
+    # 启动飞书长连接
     feishu_conn = FeishuLongConn(settings, handle_feishu_message)
     main_loop = asyncio.get_event_loop()
 
     print("\n正在连接飞书长连接...")
     feishu_conn.start(main_loop=main_loop)
 
-    # 等待连接建立
     await asyncio.sleep(3)
     print("飞书长连接已启动，等待消息中...")
     print("按 Ctrl+C 退出\n")
 
-    # 保持主线程运行
     try:
         while True:
             await asyncio.sleep(1)
     except (KeyboardInterrupt, asyncio.CancelledError):
         print("\n正在关闭...")
     finally:
+        if scheduler:
+            await scheduler.stop()
         await session_manager.stop()
         await feishu_api.close()
         await audit_store.close()
+        await orchestrator.close()
         print("Max系统已关闭")
 
 

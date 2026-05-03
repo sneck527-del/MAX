@@ -69,6 +69,72 @@ async def knowledge_compliance_check(args: dict) -> dict:
     }, ensure_ascii=False)}]}
 
 
+async def knowledge_catalog(args: dict) -> dict:
+    """知识库目录管理：查看目录或新增条目"""
+    action = args.get("action", "catalog")
+    kb = _kb_path
+
+    if action == "catalog":
+        if not kb or not kb.exists():
+            return {"content": [{"type": "text", "text": "知识库目录不存在"}]}
+
+        catalog = {}
+        total_files = 0
+        for sub_dir in sorted(kb.iterdir()):
+            if sub_dir.is_dir():
+                md_files = list(sub_dir.rglob("*.md"))
+                total_files += len(md_files)
+                catalog[sub_dir.name] = {
+                    "文件数": len(md_files),
+                    "文件列表": [str(f.relative_to(kb)) for f in md_files[:30]],
+                }
+
+        return {"content": [{"type": "text", "text": json.dumps({
+            "知识库根目录": str(kb),
+            "总文件数": total_files,
+            "目录结构": catalog,
+        }, ensure_ascii=False, indent=2)}]}
+
+    if action == "add":
+        if not kb or not kb.exists():
+            return {"content": [{"type": "text", "text": "知识库目录不存在，无法新增"}]}
+
+        from datetime import datetime
+        category = args.get("category", "company_standards")
+        title = args.get("title", "")
+        content = args.get("content", "")
+        tags = args.get("tags", "")
+
+        if not title or not content:
+            return {"content": [{"type": "text", "text": "标题和内容不能为空"}]}
+
+        target_dir = kb / category
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        safe_name = "".join(c for c in title if c.isalnum() or c in " _-")[:60]
+        filepath = target_dir / f"{safe_name}.md"
+
+        frontmatter = [
+            "---",
+            f'title: "{title}"',
+            f"date: {datetime.now().strftime('%Y-%m-%d')}",
+            f"tags: [{tags}]" if tags else "",
+            "created_by: max-system",
+            "---",
+        ]
+        full_content = "\n".join(frontmatter) + f"\n\n{content}"
+        filepath.write_text(full_content, encoding="utf-8")
+
+        return {"content": [{"type": "text", "text": json.dumps({
+            "success": True,
+            "path": str(filepath.relative_to(kb)),
+            "category": category,
+            "title": title,
+        }, ensure_ascii=False, indent=2)}]}
+
+    return {"content": [{"type": "text", "text": f"未知操作: {action}"}]}
+
+
 TOOL_DEFS = [
     {
         "name": "knowledge_search",
@@ -95,16 +161,32 @@ TOOL_DEFS = [
             "required": ["content"],
         },
     },
+    {
+        "name": "knowledge_catalog",
+        "description": "知识库目录管理。支持catalog(查看目录)/add(新增知识条目)操作。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "description": "操作: catalog/add", "enum": ["catalog", "add"]},
+                "category": {"type": "string", "description": "分类: company_standards/case_database/material_database/customer_service/media_materials"},
+                "title": {"type": "string", "description": "文档标题（add操作时需要）"},
+                "content": {"type": "string", "description": "文档内容（add操作时需要）"},
+                "tags": {"type": "string", "description": "标签，逗号分隔"},
+            },
+            "required": [],
+        },
+    },
 ]
 
 
 def register_tools(settings: MaxSettings):
     global _kb_path
-    _kb_path = settings.knowledge_base_path
+    _kb_path = settings.get_knowledge_base_path()
     _kb_path.mkdir(parents=True, exist_ok=True)
 
     handlers = {
         "knowledge_search": knowledge_search,
         "knowledge_compliance_check": knowledge_compliance_check,
+        "knowledge_catalog": knowledge_catalog,
     }
     return [(d["name"], handlers[d["name"]], d) for d in TOOL_DEFS]

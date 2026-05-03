@@ -17,15 +17,3 @@ def load_prompt(path: Path) -> str:
 
 def clear_cache() -> None:
     _cache.clear()
-
-
-def build_skill_appendix(prompts_root: Path, agent_dir: str, skill_dirs: list[str]) -> str:
-    """构建技能描述附录，追加到Agent主prompt后面"""
-    parts = []
-    for skill_dir in skill_dirs:
-        prompt_path = prompts_root / agent_dir / skill_dir / "config" / "system_prompt.md"
-        if prompt_path.exists():
-            skill_name = skill_dir.replace("skill_0X_", "").replace("skill_0", "")
-            content = load_prompt(prompt_path)
-            parts.append(f"## 技能: {skill_dir}\n{content}")
-    return "\n\n---\n\n".join(parts) if parts else ""

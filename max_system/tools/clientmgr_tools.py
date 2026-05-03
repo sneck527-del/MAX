@@ -223,6 +223,111 @@ async def clientmgr_sync_client(client_id: str) -> dict:
     return {"success": True, "record_id": record_id, "message": "已同步"}
 
 
+# ============ 客户标签与报表 ============
+
+async def client_tag_and_report(args: dict) -> dict:
+    """客户标签化管理 + 跟进报表 + 逾期预警"""
+    from datetime import timedelta
+    action = args.get("action", "report")
+    tag_client_id = args.get("client_id", "")
+    tag_labels = args.get("labels", "")
+
+    if action == "tag" and tag_client_id and tag_labels:
+        if tag_client_id in _clients_db:
+            labels = [l.strip() for l in tag_labels.split(",") if l.strip()]
+            _clients_db[tag_client_id]["tags"] = labels
+            _clients_db[tag_client_id]["updated_at"] = datetime.now().isoformat()
+            return {"content": [{"type": "text", "text": json.dumps({
+                "success": True, "client_id": tag_client_id, "labels": labels,
+            }, ensure_ascii=False)}]}
+        return {"content": [{"type": "text", "text": f"客户 {tag_client_id} 不存在"}]}
+
+    tag_system = {
+        "意向标签": ["高意向-急跟", "中意向-培育", "低意向-长线"],
+        "来源标签": ["小红书", "抖音", "老客户介绍", "门店", "朋友圈"],
+        "阶段标签": ["初次接触", "方案沟通", "报价谈判", "已签约", "施工中", "已竣工"],
+        "户型标签": ["别墅", "大平层", "普通住宅", "小户型"],
+        "风格标签": ["现代简约", "新中式", "轻奢", "北欧", "日式"],
+    }
+
+    auto_tags = {}
+    for cid, c in _clients_db.items():
+        tags = []
+        intent = c.get("intent", "")
+        if intent == "高":
+            tags.append("高意向-急跟")
+        elif intent == "中":
+            tags.append("中意向-培育")
+        else:
+            tags.append("低意向-长线")
+
+        unit = c.get("unit_type", "")
+        if "别墅" in unit:
+            tags.append("别墅")
+        elif "大平层" in unit:
+            tags.append("大平层")
+
+        source = c.get("source", "")
+        for s in ["小红书", "抖音", "朋友", "门店"]:
+            if s in source:
+                tags.append({"小红书": "小红书", "抖音": "抖音", "朋友": "老客户介绍", "门店": "门店"}.get(s, s))
+
+        status = c.get("status", "")
+        status_map = {"新建": "初次接触", "跟进中": "方案沟通", "已签约": "已签约"}
+        if status in status_map:
+            tags.append(status_map[status])
+
+        auto_tags[cid] = tags
+
+    if action == "overdue":
+        now = datetime.now()
+        overdue = []
+        for cid, c in _clients_db.items():
+            updated = c.get("updated_at", "")
+            if updated and c.get("status") in ("新建", "跟进中"):
+                try:
+                    updated_dt = datetime.fromisoformat(updated)
+                    if (now - updated_dt) > timedelta(days=7):
+                        overdue.append({
+                            "client_id": cid,
+                            "name": c.get("name", ""),
+                            "intent": c.get("intent", ""),
+                            "last_contact": updated,
+                            "days_since": (now - updated_dt).days,
+                        })
+                except ValueError:
+                    pass
+        overdue.sort(key=lambda x: x["days_since"], reverse=True)
+
+        return {"content": [{"type": "text", "text": json.dumps({
+            "逾期未跟进客户": len(overdue),
+            "列表": overdue[:20],
+            "建议动作": "逐一联系客户，更新跟进状态",
+        }, ensure_ascii=False, indent=2)}]}
+
+    total = len(_clients_db)
+    by_intent = {"高": 0, "中": 0, "低": 0, "待评估": 0}
+    by_status = {}
+    for c in _clients_db.values():
+        i = c.get("intent", "待评估")
+        by_intent[i] = by_intent.get(i, 0) + 1
+        s = c.get("status", "未知")
+        by_status[s] = by_status.get(s, 0) + 1
+
+    report = {
+        "客户标签体系": tag_system,
+        "客户统计": {
+            "总客户数": total,
+            "意向分布": by_intent,
+            "状态分布": by_status,
+        },
+        "自动标签": auto_tags,
+        "生成时间": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    }
+
+    return {"content": [{"type": "text", "text": json.dumps(report, ensure_ascii=False, indent=2)}]}
+
+
 # ============ 工具定义 ============
 
 TOOL_DEFS = [
@@ -272,6 +377,19 @@ TOOL_DEFS = [
             "required": [],
         },
     },
+    {
+        "name": "client_tag_and_report",
+        "description": "客户标签化管理、统计报表与逾期预警。支持report/tag/overdue三种操作。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "description": "操作: report(报表)/tag(打标签)/overdue(逾期预警)", "enum": ["report", "tag", "overdue"]},
+                "client_id": {"type": "string", "description": "客户编号（tag操作时需要）"},
+                "labels": {"type": "string", "description": "标签，逗号分隔（tag操作时需要）"},
+            },
+            "required": [],
+        },
+    },
 ]
 
 
@@ -282,5 +400,6 @@ def register_tools(settings: MaxSettings):
         "clientmgr_create_client": clientmgr_create_client,
         "clientmgr_update_client": clientmgr_update_client,
         "clientmgr_query_clients": clientmgr_query_clients,
+        "client_tag_and_report": client_tag_and_report,
     }
     return [(d["name"], handlers[d["name"]], d) for d in TOOL_DEFS]

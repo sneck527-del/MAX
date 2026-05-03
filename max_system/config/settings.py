@@ -4,6 +4,9 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
+# 项目根目录（max_system的上级）
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 class MaxSettings(BaseSettings):
     """从 .env 文件和环境变量加载所有配置"""
@@ -19,7 +22,7 @@ class MaxSettings(BaseSettings):
     # LLM配置 - Ollama（本地）
     ollama_base_url: str = "http://localhost:11434/v1"
     ollama_model: str = "qwen3.5"
-    ollama_api_key: str = "ollama"  # Ollama不需要key，但SDK要求非空
+    ollama_api_key: str = "ollama"
 
     # 默认LLM提供者: "deepseek" 或 "ollama"
     llm_provider: str = "deepseek"
@@ -31,39 +34,52 @@ class MaxSettings(BaseSettings):
     feishu_encrypt_key: str = ""
     feishu_bitable_app_token: str = ""
 
-    # 多维表格各表ID
-    # 线上已有表
-    bitable_table_clients: str = "tbl6IdYFBB8RDFiO"        # 客户信息
-    bitable_table_contracts: str = "tblRS5zg0u5Hj6DN"      # 合同管理
-    bitable_table_suppliers: str = "tblnKdukg33OfUsN"      # 合作商
-    bitable_table_expense: str = "tbl2X6WH1RuCwBM3"        # 支出明细
-    bitable_table_income: str = "tbl6WFZYHS19JHKk"         # 收入明细
-    bitable_table_construction: str = "tblLBj0GQik63K9W"   # 施工管理
-    bitable_table_tasks: str = "tblZA6hpoSVUbfTm"           # 任务
-    # 待新建表（init_bitable.py 创建后填入）
-    bitable_table_after_sales: str = ""                     # 售后维保台账
-    bitable_table_followups: str = ""                       # 跟进记录表（回访+跟进合并）
+    # 多维表格各表ID（由 max init 自动创建填入，也可手动填写）
+    bitable_table_clients: str = ""
+    bitable_table_contracts: str = ""
+    bitable_table_suppliers: str = ""
+    bitable_table_expense: str = ""
+    bitable_table_income: str = ""
+    bitable_table_construction: str = ""
+    bitable_table_tasks: str = ""
+    bitable_table_after_sales: str = ""
+    bitable_table_followups: str = ""
 
-    # Obsidian
-    obsidian_vault_path: Path = Path("M:/ObsidianVault/斑马精装")
+    # 知识库（空值=项目根/knowledge）
+    knowledge_base_path: Path = Path("")
+    vector_store_path: Path = Path("")
 
-    # 知识库
-    knowledge_base_path: Path = Path("M:/ClaudeCode/06_知识库")
-    vector_store_path: Path = Path("M:/ClaudeCode/06_知识库/.vector_index")
+    # 报价数据（空值=项目根/quotes）
+    quote_data_path: Path = Path("")
 
-    # 报价数据
-    quote_data_path: Path = Path("M:/ClaudeCode/Quote")
+    # 项目路径（自动推断，留空即可）
+    project_root: Path = Path("")
+    prompts_root: Path = Path("")
 
-    # 项目路径
-    project_root: Path = Path("M:/ClaudeCode")
-    prompts_root: Path = Path("M:/ClaudeCode")
-    audit_db_path: Path = Path("M:/ClaudeCode/01_Max总控/log_audit/audit.db")
+    # 数据库（空值=项目根/data/max.db）
+    db_path: Path = Path("")
 
-    # Webhook服务
-    webhook_host: str = "0.0.0.0"
-    webhook_port: int = 8080
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    def _is_set(self, p: Path) -> bool:
+        """检查路径是否被用户显式设置（非空非当前目录）"""
+        s = str(p)
+        return bool(s) and s != "."
+
+    def get_project_root(self) -> Path:
+        return self.project_root if self._is_set(self.project_root) else _PROJECT_ROOT
+
+    def get_prompts_root(self) -> Path:
+        return self.prompts_root if self._is_set(self.prompts_root) else _PROJECT_ROOT / "prompts"
+
+    def get_knowledge_base_path(self) -> Path:
+        return self.knowledge_base_path if self._is_set(self.knowledge_base_path) else self.get_project_root() / "knowledge"
+
+    def get_quote_data_path(self) -> Path:
+        return self.quote_data_path if self._is_set(self.quote_data_path) else self.get_project_root() / "quotes"
+
+    def get_db_path(self) -> Path:
+        return self.db_path if self._is_set(self.db_path) else self.get_project_root() / "data" / "max.db"
 
 
 _settings: MaxSettings | None = None

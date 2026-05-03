@@ -20,13 +20,13 @@ def load_all_sources(settings: MaxSettings) -> Generator[tuple[str, str, dict], 
     """
 
     # 1. 加载知识库目录
-    yield from _load_directory(settings.knowledge_base_path, "knowledge_base")
+    yield from _load_directory(settings.get_knowledge_base_path(), "knowledge_base")
 
     # 2. 加载报价数据
-    yield from _load_quote_data(settings.quote_data_path)
+    yield from _load_quote_data(settings.get_quote_data_path())
 
     # 3. 加载Agent规范
-    yield from _load_agent_prompts(settings.prompts_root)
+    yield from _load_agent_prompts(settings.get_prompts_root())
 
 
 def _load_directory(dir_path: Path, source: str) -> Generator[tuple[str, str, dict], None, None]:
@@ -118,9 +118,7 @@ def _load_quote_data(quote_path: Path) -> Generator[tuple[str, str, dict], None,
 def _load_agent_prompts(prompts_root: Path) -> Generator[tuple[str, str, dict], None, None]:
     """加载Agent的system_prompt作为规范知识"""
     agent_dirs = [
-        "01_Max总控", "02_Talker谈单官",
-        "03_AfterPro售后官", "04_MediaPro自媒体",
-        "05_Helper执行助手",
+        "01_Max总控",
     ]
 
     for agent_dir in agent_dirs:

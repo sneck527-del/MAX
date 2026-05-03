@@ -1,8 +1,7 @@
-"""飞书MCP工具：消息、多维表格、审批、日历"""
+"""飞书MCP工具：消息、多维表格、审批、日历、任务"""
 
 import json
 import logging
-from typing import Callable
 
 from max_system.config.settings import MaxSettings
 from max_system.integrations.feishu.api_client import FeishuApiClient
@@ -22,43 +21,37 @@ def _get_api_client() -> FeishuApiClient:
 
 async def feishu_send_message(args: dict) -> dict:
     client = _get_api_client()
-    result = await client.send_message(
+    await client.send_message(
         chat_id=args["chat_id"],
         text=args["text"],
         msg_type=args.get("msg_type", "text"),
     )
-    return {"content": [{"type": "text", "text": f"消息已发送到聊天 {args['chat_id']}"}]}
+    return {"content": [{"type": "text", "text": f"消息已发送"}]}
 
 
 async def feishu_read_bitable(args: dict) -> dict:
     client = _get_api_client()
     table_id = args["table_id"]
-
-    # 获取字段名映射（field_id → 中文field_name）
     field_map = await client.get_field_mapping(table_id)
-
     result = await client.read_bitable(
         table_id=table_id,
         filter_expr=args.get("filter", ""),
         page_size=args.get("page_size", 100),
     )
     records = result.get("data", {}).get("items", [])
-
-    # 将 field_id 替换为中文 field_name
     transformed = []
     for record in records:
         record_id = record.get("record_id", "")
         fields = record.get("fields", {})
         renamed = {field_map.get(k, k): v for k, v in fields.items()}
         transformed.append({"record_id": record_id, "fields": renamed})
-
     return {"content": [{"type": "text", "text": json.dumps(transformed, ensure_ascii=False)}]}
 
 
 async def feishu_write_bitable(args: dict) -> dict:
     client = _get_api_client()
     records = json.loads(args["records"]) if isinstance(args.get("records"), str) else args.get("records", [])
-    result = await client.write_bitable(table_id=args["table_id"], records=records)
+    await client.write_bitable(table_id=args["table_id"], records=records)
     return {"content": [{"type": "text", "text": f"成功写入 {len(records)} 条记录"}]}
 
 
@@ -70,7 +63,10 @@ async def feishu_create_approval(args: dict) -> dict:
         form=args["form"],
     )
     instance_code = result.get("data", {}).get("instance_code", "")
-    return {"content": [{"type": "text", "text": f"审批已创建，实例编号: {instance_code}"}]}
+    return {"content": [{"type": "text", "text": f"审批已创建: {instance_code}"}]}
+
+
+# ============ 日历 ============
 
 
 async def feishu_create_calendar_event(args: dict) -> dict:
@@ -83,7 +79,78 @@ async def feishu_create_calendar_event(args: dict) -> dict:
         description=args.get("description", ""),
     )
     event_id = result.get("data", {}).get("event", {}).get("event_id", "")
-    return {"content": [{"type": "text", "text": f"日历事件已创建，ID: {event_id}"}]}
+    return {"content": [{"type": "text", "text": f"日历事件已创建: {event_id}"}]}
+
+
+async def feishu_list_calendar_events(args: dict) -> dict:
+    client = _get_api_client()
+    result = await client.list_calendar_events(
+        calendar_id=args["calendar_id"],
+        start_time=args.get("start_time", ""),
+        end_time=args.get("end_time", ""),
+        page_size=args.get("page_size", 50),
+    )
+    events = result.get("data", {}).get("items", [])
+    summary = []
+    for ev in events:
+        summary.append({
+            "event_id": ev.get("event_id", ""),
+            "summary": ev.get("summary", ""),
+            "start_time": ev.get("start_time", {}).get("timestamp", ""),
+            "end_time": ev.get("end_time", {}).get("timestamp", ""),
+        })
+    return {"content": [{"type": "text", "text": json.dumps(summary, ensure_ascii=False)}]}
+
+
+async def feishu_delete_calendar_event(args: dict) -> dict:
+    client = _get_api_client()
+    await client.delete_calendar_event(
+        calendar_id=args["calendar_id"],
+        event_id=args["event_id"],
+    )
+    return {"content": [{"type": "text", "text": f"日历事件已删除: {args['event_id']}"}]}
+
+
+# ============ 任务 ============
+
+
+async def feishu_create_task(args: dict) -> dict:
+    client = _get_api_client()
+    result = await client.create_task(
+        summary=args["summary"],
+        description=args.get("description", ""),
+        due_time=args.get("due_time", ""),
+    )
+    task = result.get("data", {}).get("task", {})
+    task_id = task.get("id", "")
+    return {"content": [{"type": "text", "text": f"任务已创建: {task_id} - {args['summary']}"}]}
+
+
+async def feishu_list_tasks(args: dict) -> dict:
+    client = _get_api_client()
+    result = await client.list_tasks(
+        start_time=args.get("start_time", ""),
+        end_time=args.get("end_time", ""),
+        status=args.get("status", "1"),  # 1=未完成
+        page_size=args.get("page_size", 50),
+    )
+    tasks = result.get("data", {}).get("items", [])
+    summary = []
+    for t in tasks:
+        summary.append({
+            "task_id": t.get("id", ""),
+            "summary": t.get("summary", ""),
+            "due_time": t.get("due", {}).get("time", "") if t.get("due") else "",
+            "status": t.get("status", ""),
+            "completed_at": t.get("completed_at", ""),
+        })
+    return {"content": [{"type": "text", "text": json.dumps(summary, ensure_ascii=False)}]}
+
+
+async def feishu_complete_task(args: dict) -> dict:
+    client = _get_api_client()
+    await client.complete_task(args["task_id"])
+    return {"content": [{"type": "text", "text": f"任务已完成: {args['task_id']}"}]}
 
 
 # ============ 工具定义 ============
@@ -91,7 +158,7 @@ async def feishu_create_calendar_event(args: dict) -> dict:
 TOOL_DEFS = [
     {
         "name": "feishu_send_message",
-        "description": "发送消息到飞书聊天。支持文本和卡片消息。",
+        "description": "发送消息到飞书聊天。设计师让你'通知XX'或'发消息给XX'时使用。",
         "parameters": {
             "type": "object",
             "properties": {
@@ -104,7 +171,7 @@ TOOL_DEFS = [
     },
     {
         "name": "feishu_read_bitable",
-        "description": "读取飞书多维表格记录。支持过滤和分页。",
+        "description": "读取飞书多维表格记录。支持过滤和分页。先调用此工具查看表结构再写入。",
         "parameters": {
             "type": "object",
             "properties": {
@@ -117,7 +184,7 @@ TOOL_DEFS = [
     },
     {
         "name": "feishu_write_bitable",
-        "description": "写入飞书多维表格记录。records为JSON字符串。",
+        "description": "写入飞书多维表格记录。records为JSON字符串，字段名用中文。",
         "parameters": {
             "type": "object",
             "properties": {
@@ -142,17 +209,81 @@ TOOL_DEFS = [
     },
     {
         "name": "feishu_create_calendar_event",
-        "description": "创建飞书日历事件。",
+        "description": "在飞书日历中创建日程事件。设计师说'帮我安排一个XX日程'或'在日历上记一下XX'时使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "calendar_id": {"type": "string", "description": "日历ID（必填），可通过飞书日历页面获取"},
+                "summary": {"type": "string", "description": "日程标题"},
+                "start_time": {"type": "string", "description": "开始时间，格式如 2026-05-10T14:00:00+08:00"},
+                "end_time": {"type": "string", "description": "结束时间，格式如 2026-05-10T15:00:00+08:00"},
+                "description": {"type": "string", "description": "日程详细描述"},
+            },
+            "required": ["calendar_id", "summary", "start_time", "end_time"],
+        },
+    },
+    {
+        "name": "feishu_list_calendar_events",
+        "description": "查询飞书日历中的日程列表。设计师问'今天有什么安排'或'这周有什么日程'时使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "calendar_id": {"type": "string", "description": "日历ID（必填）"},
+                "start_time": {"type": "string", "description": "查询开始时间"},
+                "end_time": {"type": "string", "description": "查询结束时间"},
+                "page_size": {"type": "integer", "description": "返回数量，默认50"},
+            },
+            "required": ["calendar_id"],
+        },
+    },
+    {
+        "name": "feishu_delete_calendar_event",
+        "description": "删除飞书日历中的日程事件。设计师说'取消XX日程'时使用。",
         "parameters": {
             "type": "object",
             "properties": {
                 "calendar_id": {"type": "string", "description": "日历ID"},
-                "summary": {"type": "string", "description": "事件标题"},
-                "start_time": {"type": "string", "description": "开始时间戳"},
-                "end_time": {"type": "string", "description": "结束时间戳"},
-                "description": {"type": "string", "description": "事件描述"},
+                "event_id": {"type": "string", "description": "日程事件ID"},
             },
-            "required": ["calendar_id", "summary", "start_time", "end_time"],
+            "required": ["calendar_id", "event_id"],
+        },
+    },
+    {
+        "name": "feishu_create_task",
+        "description": "在飞书中创建待办任务。设计师说'帮我设一个待办'或'记一下XX事情要XX时间完成'时使用。支持设置截止时间和提醒。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string", "description": "任务标题"},
+                "description": {"type": "string", "description": "任务详细描述"},
+                "due_time": {"type": "string", "description": "截止时间，ISO格式 2026-05-10T18:00:00+08:00"},
+            },
+            "required": ["summary"],
+        },
+    },
+    {
+        "name": "feishu_list_tasks",
+        "description": "查询飞书中的待办任务列表。设计师问'我有哪些待办'或'还有什么没做完的'时使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "start_time": {"type": "string", "description": "查询开始时间"},
+                "end_time": {"type": "string", "description": "查询结束时间"},
+                "status": {"type": "string", "description": "状态: 1=未完成, 2=已完成"},
+                "page_size": {"type": "integer", "description": "返回数量，默认50"},
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "feishu_complete_task",
+        "description": "完成（勾选）飞书中的待办任务。设计师说'XX任务做完了'时使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "description": "任务ID"},
+            },
+            "required": ["task_id"],
         },
     },
 ]
@@ -169,6 +300,11 @@ def register_tools(settings: MaxSettings):
         "feishu_write_bitable": feishu_write_bitable,
         "feishu_create_approval": feishu_create_approval,
         "feishu_create_calendar_event": feishu_create_calendar_event,
+        "feishu_list_calendar_events": feishu_list_calendar_events,
+        "feishu_delete_calendar_event": feishu_delete_calendar_event,
+        "feishu_create_task": feishu_create_task,
+        "feishu_list_tasks": feishu_list_tasks,
+        "feishu_complete_task": feishu_complete_task,
     }
 
     return [(d["name"], handlers[d["name"]], d) for d in TOOL_DEFS]
