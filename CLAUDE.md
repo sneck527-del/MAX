@@ -8,8 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- **Run all tests**: `pytest`
+- **Run all tests**: `pytest` (asyncio_mode=auto, no `@pytest.mark.asyncio` needed on `async def` tests)
 - **Run single test**: `pytest max_system/tests/test_file.py::TestClass::test_method -v`
+- **Run tests with coverage**: `pytest --cov=max_system --cov-report=term-missing`
+- **Lint**: `ruff check max_system/`
 - **Run CLI mode**: `python -m max_system cli`
 - **Run Feishu mode** (default): `python -m max_system`
 - **Init system**: `python -m max_system init`
@@ -78,4 +80,26 @@ Copy `.env.example` to `.env`. 4 required fields (see `max_system/config/setting
 - `FEISHU_APP_ID`, `FEISHU_APP_SECRET` — Feishu app credentials
 - `FEISHU_BITABLE_APP_TOKEN` — Feishu Bitable base token
 
+Optional: set `LLM_PROVIDER=ollama` to use a local Ollama instance (default model: `qwen3.5` at `http://localhost:11434/v1`).
+
 Run `python -m max_system init` to auto-create Bitable tables, write table IDs to `.env`, and initialize the database.
+
+## CLI Mode
+
+In CLI mode (`python -m max_system cli`), these slash commands are available:
+
+| Command | Description |
+|---------|-------------|
+| `/model` | Switch LLM provider (deepseek/ollama) at runtime |
+| `/status` | Show current LLM, tool count, and registered tool names |
+| `/clear` | Clear conversation history |
+| `/help` | Show help text |
+| `/quit` | Exit |
+
+## Tool Output Convention
+
+All tools return results in MCP-compatible format: `{"content": [{"type": "text", "text": "..."}]}`. When writing new tools, follow this pattern so the orchestrator can extract text correctly in `_execute_tool` ([orchestrator.py:211-215](max_system/core/orchestrator.py#L211-L215)).
+
+## Dependency Note
+
+Despite `anthropic` appearing in `pyproject.toml`, the actual LLM client uses the `openai` package (OpenAI-compatible API). `lark-oapi` is the Feishu SDK package (imported as `lark_oapi`).

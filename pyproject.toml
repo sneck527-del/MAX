@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Max 多Agent室内设计AI助手系统 - 斑马精装"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=0.52.0",
+    "openai>=1.0",
     "lark-oapi>=1.5.5",
     "fastapi>=0.115.0",
     "uvicorn>=0.31.0",

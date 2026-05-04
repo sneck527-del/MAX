@@ -133,3 +133,60 @@ class TestScheduleTools:
         from max_system.tools.schedule_tools import schedule_list
         result = await schedule_list({})
         assert result["content"][0]["type"] == "text"
+
+
+class TestQuoteCalculation:
+    """报价汇总计算测试"""
+
+    @pytest.mark.asyncio
+    async def test_calculate_summary_basic(self):
+        from max_system.tools.quote_tools import quote_calculate_summary
+        items = [
+            {"name": "拆除旧门窗", "type": "engineering", "quantity": 1, "unit_price": 2000},
+            {"name": "瓷砖铺贴", "type": "engineering", "quantity": 80, "unit_price": 65},
+            {"name": "实木地板", "type": "material", "quantity": 50, "unit_price": 300},
+        ]
+        # 工程: 2000 + 5200 = 7200  |  产品: 15000  |  直接费: 22200
+        # 管理费 8%: 1776  |  税 3.41%: 757.02  |  垃圾 800  |  保护 500  |  总计: 26033.02
+        result = await quote_calculate_summary({"items": items})
+        text = result["content"][0]["text"]
+        import json
+        data = json.loads(text)
+        assert data["工程小计"] == 7200
+        assert data["产品小计"] == 15000
+        assert data["直接费用合计"] == 22200
+        assert data["管理费"] == 1776.0
+        assert data["税金"] == 757.02
+        assert data["垃圾清运费"] == 800
+        assert data["成品保护费"] == 500
+        assert data["报价总计"] == 26033.02
+        assert len(data["items"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_calculate_summary_empty_items(self):
+        from max_system.tools.quote_tools import quote_calculate_summary
+        result = await quote_calculate_summary({"items": []})
+        text = result["content"][0]["text"]
+        assert "请提供" in text
+
+    @pytest.mark.asyncio
+    async def test_calculate_summary_string_items(self):
+        from max_system.tools.quote_tools import quote_calculate_summary
+        import json
+        items_str = json.dumps([
+            {"name": "墙面乳胶漆", "type": "engineering", "quantity": 100, "unit_price": 25},
+        ])
+        result = await quote_calculate_summary({"items": items_str})
+        data = json.loads(result["content"][0]["text"])
+        assert data["直接费用合计"] == 2500
+
+    @pytest.mark.asyncio
+    async def test_calculate_summary_zero_quantity(self):
+        from max_system.tools.quote_tools import quote_calculate_summary
+        items = [
+            {"name": "某项目", "type": "engineering", "quantity": 0, "unit_price": 100},
+        ]
+        result = await quote_calculate_summary({"items": items})
+        import json
+        data = json.loads(result["content"][0]["text"])
+        assert data["报价总计"] == data["垃圾清运费"] + data["成品保护费"]

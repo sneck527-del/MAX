@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(git branch *)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "WebFetch(domain:sneck527.feishu.cn)",
+      "Bash(python -m scripts.init_bitable)",
+      "Bash(python -c ' *)",
+      "Bash(python -m scripts._inspect_tables)",
+      "Bash(python -c \"from max_system.config.settings import MaxSettings; s = MaxSettings\\(\\); print\\('Settings OK:', s.llm_provider, s.llm_model, s.feishu_bitable_app_token[:8]+'...'\\)\")",
+      "Bash(pip list *)",
+      "Bash(timeout 60 python -m max_system cli)",
+      "Bash(timeout 120 python -m max_system cli)",
+      "Bash(chcp 65001)"
     ],
     "additionalDirectories": [
       "f:\\code\\MAX"
