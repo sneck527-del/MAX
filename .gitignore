@@ -10,3 +10,4 @@ build/
 .venv/
 *.db
 .vector_index/
+*.xlsx
