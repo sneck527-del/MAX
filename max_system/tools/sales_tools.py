@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from max_system.config.settings import MaxSettings
 from max_system.tools.clientmgr_tools import _clients_db
@@ -88,6 +88,8 @@ async def leadcatch_classify(args: dict) -> dict:
         "status": "新建", "intent": intent,
         "created_at": datetime.now().isoformat(),
         "updated_at": datetime.now().isoformat(),
+        "preferences": {},
+        "last_contact": datetime.now().isoformat(),
     }
     try:
         await clientmgr_sync_client(client_id)
@@ -115,6 +117,9 @@ async def needanaly_report(args: dict) -> dict:
 
     if not client:
         return {"content": [{"type": "text", "text": f"未找到客户: {client_name or client_id}，请先通过leadcatch_classify登记客户信息"}]}
+
+    # 更新最后联系时间
+    _update_client_last_contact(client_name)
 
     # 返回原始客户数据，由LLM自行分析
     data = {
@@ -150,6 +155,9 @@ async def contractpro_draft(args: dict) -> dict:
                 client = c
                 break
 
+    # 更新最后联系时间
+    _update_client_last_contact(client_name)
+
     # 查询报价数据
     quote_data = {}
     try:
@@ -176,23 +184,69 @@ async def contractpro_draft(args: dict) -> dict:
 
 # ============ 4. 销售数据统计 ============
 
+def _compute_period_cutoff(period: str) -> datetime | None:
+    """根据周期描述计算起始时间，返回None表示不限时间（全量统计）。"""
+    now = datetime.now()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    period_map = {
+        "本日": today,
+        "本周": today - timedelta(days=today.weekday()),
+        "本月": today.replace(day=1),
+        "本季": today.replace(month=((today.month - 1) // 3) * 3 + 1, day=1),
+        "本年": today.replace(month=1, day=1),
+        "上周": today - timedelta(days=today.weekday() + 7),
+        "上月": (today.replace(day=1) - timedelta(days=1)).replace(day=1),
+    }
+
+    return period_map.get(period, None)
+
+
+def _filter_clients_by_period(clients: dict, cutoff: datetime | None) -> list:
+    """过滤客户列表，只保留created_at >= cutoff的客户。
+    如果cutoff为None则返回全部。对于没有created_at字段的记录，为保证向后兼容，将其计入。
+    """
+    if cutoff is None:
+        return list(clients.values())
+
+    filtered = []
+    for c in clients.values():
+        created_str = c.get("created_at", "")
+        if not created_str:
+            # 没有created_at字段，向后兼容：计入统计
+            filtered.append(c)
+            continue
+        try:
+            created_dt = datetime.fromisoformat(created_str)
+            if created_dt >= cutoff:
+                filtered.append(c)
+        except (ValueError, TypeError):
+            # 解析失败，向后兼容：计入统计
+            filtered.append(c)
+    return filtered
+
+
 async def datastat_report(args: dict) -> dict:
-    """从客户数据库统计销售数据"""
+    """从客户数据库统计销售数据，支持按周期过滤。"""
     period = args.get("period", "本月")
 
-    total = len(_clients_db)
-    high_intent = sum(1 for c in _clients_db.values() if c.get("intent") == "高")
-    mid_intent = sum(1 for c in _clients_db.values() if c.get("intent") == "中")
-    low_intent = sum(1 for c in _clients_db.values() if c.get("intent") == "低")
+    cutoff = _compute_period_cutoff(period)
+    filtered_clients = _filter_clients_by_period(_clients_db, cutoff)
 
-    signed = sum(1 for c in _clients_db.values() if c.get("status") == "已签约")
-    in_progress = sum(1 for c in _clients_db.values() if c.get("status") == "跟进中")
+    total = len(filtered_clients)
+    high_intent = sum(1 for c in filtered_clients if c.get("intent") == "高")
+    mid_intent = sum(1 for c in filtered_clients if c.get("intent") == "中")
+    low_intent = sum(1 for c in filtered_clients if c.get("intent") == "低")
+
+    signed = sum(1 for c in filtered_clients if c.get("status") == "已签约")
+    in_progress = sum(1 for c in filtered_clients if c.get("status") == "跟进中")
 
     conversion_rate = f"{(signed / total * 100):.1f}%" if total > 0 else "0%"
 
     report = {
         "统计周期": period,
         "生成时间": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "筛选起始时间": cutoff.strftime("%Y-%m-%d %H:%M") if cutoff else "无限制（全量统计）",
         "总量统计": {
             "总线索数": total,
             "高意向": high_intent,
@@ -209,9 +263,9 @@ async def datastat_report(args: dict) -> dict:
         "建议": [],
     }
 
-    for cid, client in _clients_db.items():
-        if client.get("status") == "新建":
-            report["待跟进预警"].append(f"{client.get('name', '未知')}（{client.get('intent', '?')}意向，待首次跟进）")
+    for c in filtered_clients:
+        if c.get("status") == "新建":
+            report["待跟进预警"].append(f"{c.get('name', '未知')}（{c.get('intent', '?')}意向，待首次跟进）")
 
     if high_intent > 0 and signed < high_intent:
         report["建议"].append(f"有{high_intent}个高意向客户未签约，建议优先安排方案沟通")
@@ -220,6 +274,18 @@ async def datastat_report(args: dict) -> dict:
         report["建议"].append("低意向客户占比偏高，建议优化获客渠道质量")
 
     return {"content": [{"type": "text", "text": json.dumps(report, ensure_ascii=False, indent=2)}]}
+
+
+def _update_client_last_contact(client_name: str) -> None:
+    """更新客户最后联系时间。如果客户不存在，静默跳过。"""
+    if not client_name:
+        return
+    for c in _clients_db.values():
+        if c.get("name", "").lower() == client_name.lower():
+            c["last_contact"] = datetime.now().isoformat()
+            if "preferences" not in c or not isinstance(c.get("preferences"), dict):
+                c["preferences"] = {}
+            break
 
 
 # ============ 工具定义和注册 ============

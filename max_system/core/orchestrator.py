@@ -4,16 +4,24 @@ Max作为唯一的AI入口，通过function calling直接调用所有工具。
 没有子Agent、没有dispatch，一次LLM调用链搞定。
 """
 
+import contextvars
 import json
 import logging
 from typing import AsyncIterator
 
 from max_system.config.settings import MaxSettings
+from max_system.config.workspace import Workspace, WorkspaceManager
 from max_system.core.llm_client import LLMClient
 from max_system.utils.prompt_loader import load_prompt
 from max_system.audit import logger as audit_logger
 
 logger = logging.getLogger(__name__)
+
+# Context variable for the current workspace during a dispatch cycle.
+# Tools read this to determine which workspace DB / data to operate on.
+_current_workspace: contextvars.ContextVar = contextvars.ContextVar(
+    "workspace", default=None
+)
 
 
 class MaxOrchestrator:
@@ -29,8 +37,13 @@ class MaxOrchestrator:
         self._tools: dict[str, callable] = {}
         self._tool_defs: list[dict] = []
 
-        # Profile管理器
+        # Profile管理器 (global fallback for CLI mode)
         self.profile_manager = None
+
+        # Workspace manager (multi-tenant isolation)
+        self.workspace_manager = WorkspaceManager(
+            settings.get_project_root() / "data" / "workspaces"
+        )
 
     async def initialize(self) -> None:
         """初始化编排器"""
@@ -45,12 +58,15 @@ class MaxOrchestrator:
         # 注册所有工具
         self._register_all_tools()
 
-        # 初始化Profile管理器
+        # 初始化Profile管理器 (global fallback)
         from max_system.config.profile import ProfileManager
         from max_system.tools.profile_tools import set_profile_manager
         self.profile_manager = ProfileManager(self.settings.get_db_path())
         await self.profile_manager.initialize()
         set_profile_manager(self.profile_manager)
+
+        # 初始化Workspace管理器
+        await self.workspace_manager.initialize()
 
         self._initialized = True
         logger.info(
@@ -62,6 +78,7 @@ class MaxOrchestrator:
         """关闭编排器，释放资源"""
         if self.profile_manager:
             await self.profile_manager.close()
+        await self.workspace_manager.close()
 
     def _register_all_tools(self) -> None:
         """注册所有工具"""
@@ -81,36 +98,49 @@ class MaxOrchestrator:
         if not self._initialized:
             await self.initialize()
 
-        # 首次使用引导：profile为空时注入引导指令
-        is_first_run = False
-        if self.profile_manager:
-            is_first_run = await self.profile_manager.is_empty()
+        # Set up workspace context if session_id is a non-default chat_id
+        workspace: Workspace | None = None
+        if session_id and session_id != "cli":
+            workspace = await self.workspace_manager.get_workspace(session_id)
+            _current_workspace.set(workspace)
+            # Wire workspace profile into profile_tools
+            from max_system.tools.profile_tools import set_profile_manager
+            if workspace.profile:
+                set_profile_manager(workspace.profile)
 
-        system_prompt = await self._build_max_system_prompt()
-        if is_first_run:
-            system_prompt += (
+        try:
+            # 首次使用引导：profile为空时注入引导指令
+            profile_mgr = workspace.profile if workspace and workspace.profile else self.profile_manager
+            is_first_run = False
+            if profile_mgr:
+                is_first_run = await profile_mgr.is_empty()
 
-                "\n\n---\n"
-                "## 首次使用引导\n"
-                "这是设计师第一次和你对话，你还没有任何公司信息。"
-                "请主动发起简短的自我介绍和引导，询问以下关键信息（不要一次全问，分2-3轮）：\n"
-                "1. 公司叫什么名字？\n"
-                "2. 主打什么设计风格？\n"
-                "3. 服务哪些客户群体？在哪个城市？\n"
-                "4. 品牌调性偏好？（比如：专业严谨/轻松亲切/高端雅致）\n"
-                "设计师回答后，你调用profile_update工具存储，然后自然地继续对话。"
-                "不要机械地逐条提问，要像朋友聊天一样自然。"
-            )
+            system_prompt = await self._build_max_system_prompt(workspace)
+            if is_first_run:
+                system_prompt += (
 
-        messages = [{"role": "system", "content": system_prompt}]
-        if history:
-            messages.extend(history)
-        messages.append({"role": "user", "content": message})
+                    "\n\n---\n"
+                    "## 首次使用引导\n"
+                    "这是一位新设计师。系统已经发送了飞书交互式卡片来收集公司信息"
+                    "（公司名、设计风格、城市、客户群、品牌调性等）。"
+                    "你只需要简单打招呼，介绍自己是谁、能做什么，然后提示设计师"
+                    "查看并填写卡片即可。不要重复询问卡片上已有的问题。"
+                )
 
-        max_tools = LLMClient.build_tool_definitions(self._tool_defs)
-        response = await self.llm.chat(messages, tools=max_tools)
+            messages = [{"role": "system", "content": system_prompt}]
+            if history:
+                messages.extend(history)
+            messages.append({"role": "user", "content": message})
 
-        return await self._process_response(response, messages, session_id, user_id)
+            max_tools = LLMClient.build_tool_definitions(self._tool_defs)
+            response = await self.llm.chat(messages, tools=max_tools)
+
+            return await self._process_response(response, messages, session_id, user_id)
+        finally:
+            # Restore global profile_manager on exit (backward compat)
+            if workspace:
+                from max_system.tools.profile_tools import set_profile_manager
+                set_profile_manager(self.profile_manager)
 
     async def dispatch_stream(
         self,
@@ -123,19 +153,33 @@ class MaxOrchestrator:
         if not self._initialized:
             await self.initialize()
 
-        messages = [{"role": "system", "content": await self._build_max_system_prompt()}]
-        if history:
-            messages.extend(history)
-        messages.append({"role": "user", "content": message})
+        # Set up workspace context
+        workspace: Workspace | None = None
+        if session_id and session_id != "cli":
+            workspace = await self.workspace_manager.get_workspace(session_id)
+            _current_workspace.set(workspace)
+            from max_system.tools.profile_tools import set_profile_manager
+            if workspace.profile:
+                set_profile_manager(workspace.profile)
 
-        max_tools = LLMClient.build_tool_definitions(self._tool_defs)
+        try:
+            messages = [{"role": "system", "content": await self._build_max_system_prompt(workspace)}]
+            if history:
+                messages.extend(history)
+            messages.append({"role": "user", "content": message})
 
-        async for chunk in self.llm.chat_stream(messages, tools=max_tools):
-            delta = chunk.choices[0].delta if chunk.choices else None
-            if delta is None:
-                continue
-            if delta.content:
-                yield {"type": "text", "content": delta.content}
+            max_tools = LLMClient.build_tool_definitions(self._tool_defs)
+
+            async for chunk in self.llm.chat_stream(messages, tools=max_tools):
+                delta = chunk.choices[0].delta if chunk.choices else None
+                if delta is None:
+                    continue
+                if delta.content:
+                    yield {"type": "text", "content": delta.content}
+        finally:
+            if workspace:
+                from max_system.tools.profile_tools import set_profile_manager
+                set_profile_manager(self.profile_manager)
 
     async def _process_response(
         self,
@@ -218,18 +262,72 @@ class MaxOrchestrator:
                 return json.dumps(result, ensure_ascii=False)
             except Exception as e:
                 logger.error("工具 %s 执行失败: %s", tool_name, e)
+                await audit_logger.log_tool_call(
+                    session_id=session_id,
+                    user_id=user_id,
+                    agent="max",
+                    tool_name=tool_name,
+                    tool_input=args,
+                    result_status="error",
+                )
                 return f"工具执行失败: {str(e)}"
 
         return f"未知工具: {tool_name}"
 
-    async def _build_max_system_prompt(self) -> str:
-        """构建Max的系统提示"""
-        # 注入Profile信息
+    def _build_preference_summary(self) -> str:
+        """构建客户偏好记忆摘要，注入系统提示中。
+
+        只包含有非空preferences的客户，最多取最近更新的10个。
+        """
+        try:
+            from max_system.tools.clientmgr_tools import _get_clients_db
+
+            clients_db = _get_clients_db()
+            clients_with_prefs = []
+            for c in clients_db.values():
+                prefs = c.get("preferences")
+                if prefs and isinstance(prefs, dict) and len(prefs) > 0:
+                    clients_with_prefs.append(c)
+
+            if not clients_with_prefs:
+                return ""
+
+            clients_with_prefs.sort(
+                key=lambda c: c.get("updated_at") or c.get("created_at") or "",
+                reverse=True,
+            )
+            clients_with_prefs = clients_with_prefs[:10]
+
+            lines = []
+            for c in clients_with_prefs:
+                name = c.get("name", "未知")
+                prefs = c.get("preferences", {})
+                prefs_str = ", ".join(f"{k}={v}" for k, v in prefs.items())
+                lines.append(f"- {name}: {prefs_str}")
+
+            if lines:
+                return "\n## 客户偏好记忆\n" + "\n".join(lines)
+
+        except Exception:
+            pass
+
+        return ""
+
+    async def _build_max_system_prompt(self, workspace: Workspace | None = None) -> str:
+        """构建Max的系统提示
+
+        Args:
+            workspace: If provided, use the workspace's ProfileManager.
+                       Otherwise fall back to the global profile_manager (CLI mode).
+        """
+        # 注入Profile信息 (workspace first, then global fallback)
         profile_section = ""
-        if self.profile_manager:
+        profile_mgr = (workspace.profile if workspace and workspace.profile
+                       else self.profile_manager)
+        if profile_mgr:
             try:
-                profile = await self.profile_manager.get_all()
-                profile_section = self.profile_manager.build_prompt_section(profile)
+                profile = await profile_mgr.get_all()
+                profile_section = profile_mgr.build_prompt_section(profile)
             except Exception:
                 logger.warning("Profile注入失败，跳过")
 
@@ -248,7 +346,10 @@ Base Token: {s.feishu_bitable_app_token}
 需要字段详情时，先调 feishu_read_bitable 查看表结构。
 """
 
+        preference_summary = self._build_preference_summary()
+
         return f"""{self.max_prompt}{profile_section}{bitable_info}
+{preference_summary}
 
 ---
 

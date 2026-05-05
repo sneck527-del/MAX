@@ -1,8 +1,10 @@
 """Max系统入口点"""
 
 import asyncio
+import json
 import logging
 import sys
+import time
 from pathlib import Path
 
 
@@ -286,6 +288,69 @@ async def _async_feishu():
         await scheduler.start()
         print("  定时任务调度器已启动")
 
+    # 已发送过引导卡片的 chat_id 集合
+    _sent_onboarding_cards: set[str] = set()
+
+    # ============ 卡片交互回调 ============
+
+    async def handle_card_action(payload: dict):
+        """处理飞书卡片交互事件（按钮点击等）"""
+        action_value = payload.get("action_value", {})
+        form_value = payload.get("form_value", {})
+        chat_id = payload.get("chat_id", "")
+
+        logger = logging.getLogger(__name__)
+        logger.info("========== 处理卡片交互 ==========")
+
+        if not isinstance(action_value, dict):
+            logger.warning("action_value 不是 dict，跳过")
+            return
+
+        if action_value.get("action") != "onboarding":
+            logger.info("非引导卡片交互，跳过: %s", action_value.get("action"))
+            return
+
+        # 设置 workspace 上下文
+        if chat_id:
+            from max_system.core.orchestrator import _current_workspace
+            workspace = await orchestrator.workspace_manager.get_workspace(chat_id)
+            _current_workspace.set(workspace)
+            from max_system.tools.clientmgr_tools import set_current_workspace
+            set_current_workspace(chat_id)
+            profile_mgr = workspace.profile if workspace and workspace.profile else orchestrator.profile_manager
+        else:
+            profile_mgr = orchestrator.profile_manager
+
+        if profile_mgr is None:
+            logger.error("无法获取 profile_mgr")
+            return
+
+        try:
+            from max_system.core.onboarding import process_card_action
+            next_card, is_finished = await process_card_action(
+                action_value, form_value, profile_mgr
+            )
+
+            if is_finished:
+                logger.info("引导流程完成，发送欢迎消息")
+                await feishu_api.send_message(
+                    chat_id,
+                    "配置完成！我是 Max，你的 AI 室内设计助手。有什么可以帮你的？\n\n你可以试试：\n- \"帮我分析一下这个客户\"\n- \"生成张先生的合同\"\n- \"查一下最近的材料报价\"",
+                )
+                return
+
+            if next_card:
+                card_json = json.dumps(next_card, ensure_ascii=False)
+                await feishu_api.send_message(chat_id, card_json, msg_type="interactive")
+                logger.info("已发送引导卡片 step=%s", action_value.get("step"))
+
+        except Exception as e:
+            logger.error("处理卡片交互失败: %s", e, exc_info=True)
+            try:
+                await feishu_api.send_message(chat_id, "处理失败，请重试。")
+            except Exception:
+                pass
+
     async def _send_loading_indicator(chat_id: str) -> str | None:
         """2秒后发送加载提示，返回消息ID以便后续删除"""
         try:
@@ -320,6 +385,31 @@ async def _async_feishu():
         loading_task = asyncio.create_task(_send_loading_indicator(chat_id))
 
         try:
+            # Set up workspace context for multi-tenant isolation
+            if chat_id:
+                from max_system.core.orchestrator import _current_workspace
+                workspace = await orchestrator.workspace_manager.get_workspace(chat_id)
+                _current_workspace.set(workspace)
+                # Wire clientmgr workspace
+                from max_system.tools.clientmgr_tools import set_current_workspace
+                set_current_workspace(chat_id)
+
+            # 首次使用：发送引导卡片
+            if chat_id and chat_id not in _sent_onboarding_cards:
+                profile_mgr = workspace.profile if workspace and workspace.profile else orchestrator.profile_manager
+                if profile_mgr:
+                    try:
+                        is_first = await profile_mgr.is_empty()
+                        if is_first:
+                            _sent_onboarding_cards.add(chat_id)
+                            from max_system.core.onboarding import get_first_card
+                            card = get_first_card()
+                            card_json = json.dumps(card, ensure_ascii=False)
+                            await feishu_api.send_message(chat_id, card_json, msg_type="interactive")
+                            logger.info("已发送引导卡片到 chat=%s", chat_id[:10])
+                    except Exception as e:
+                        logger.warning("检查首次使用状态失败: %s", e)
+
             # 会话上下文
             session = await session_manager.get_or_create(chat_id)
             session_manager.add_message(session, "user", text)
@@ -362,7 +452,7 @@ async def _async_feishu():
                 pass
 
     # 启动飞书长连接
-    feishu_conn = FeishuLongConn(settings, handle_feishu_message)
+    feishu_conn = FeishuLongConn(settings, handle_feishu_message, on_card_action=handle_card_action)
     main_loop = asyncio.get_event_loop()
 
     print("\n正在连接飞书长连接...")
@@ -372,9 +462,34 @@ async def _async_feishu():
     print("飞书长连接已启动，等待消息中...")
     print("按 Ctrl+C 退出\n")
 
+    # 主动提醒：每24小时检查一次
+    last_reminder_check = 0.0
+
+    async def _run_daily_reminder_check():
+        """每日检查客户跟进提醒，如有提醒则发送给设计师"""
+        nonlocal last_reminder_check
+        now = time.time()
+        if now - last_reminder_check < 86400:
+            return
+        last_reminder_check = now
+        try:
+            from max_system.tools.reminder_tools import _check_proactive_reminders
+            result = await _check_proactive_reminders()
+            if result["count"] > 0:
+                msg_lines = ["[自动提醒] 以下客户需要关注："]
+                for r in result["reminders"]:
+                    msg_lines.append(f"- {r['message']}")
+                msg = "\n".join(msg_lines)
+                logger = logging.getLogger(__name__)
+                logger.info("发送主动提醒: %d 条", result["count"])
+                print(f"\n{'='*40}\n{msg}\n{'='*40}\n")
+        except Exception as e:
+            logging.getLogger(__name__).warning("主动提醒检查失败: %s", e)
+
     try:
         while True:
             await asyncio.sleep(1)
+            await _run_daily_reminder_check()
     except (KeyboardInterrupt, asyncio.CancelledError):
         print("\n正在关闭...")
     finally:

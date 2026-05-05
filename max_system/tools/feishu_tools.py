@@ -26,7 +26,25 @@ async def feishu_send_message(args: dict) -> dict:
         text=args["text"],
         msg_type=args.get("msg_type", "text"),
     )
-    return {"content": [{"type": "text", "text": f"消息已发送"}]}
+    return {"content": [{"type": "text", "text": "消息已发送"}]}
+
+
+async def feishu_send_card(args: dict) -> dict:
+    """发送飞书交互式卡片消息。
+
+    接收卡片JSON字符串，以interactive类型发送。
+    卡片JSON格式参考飞书消息卡片文档。
+    """
+    client = _get_api_client()
+    card_json = args.get("card_json", "")
+    if isinstance(card_json, dict):
+        card_json = json.dumps(card_json, ensure_ascii=False)
+    await client.send_message(
+        chat_id=args["chat_id"],
+        text=card_json,
+        msg_type="interactive",
+    )
+    return {"content": [{"type": "text", "text": "卡片已发送"}]}
 
 
 async def feishu_read_bitable(args: dict) -> dict:
@@ -170,6 +188,18 @@ TOOL_DEFS = [
         },
     },
     {
+        "name": "feishu_send_card",
+        "description": "发送飞书交互式卡片消息。可用于展示配置表单、选项列表、信息确认卡等。card_json是完整的飞书卡片JSON对象或字符串。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "chat_id": {"type": "string", "description": "聊天ID"},
+                "card_json": {"type": "string", "description": "飞书卡片消息JSON对象，包含config/header/elements等结构"},
+            },
+            "required": ["chat_id", "card_json"],
+        },
+    },
+    {
         "name": "feishu_read_bitable",
         "description": "读取飞书多维表格记录。支持过滤和分页。先调用此工具查看表结构再写入。",
         "parameters": {
@@ -296,6 +326,7 @@ def register_tools(settings: MaxSettings):
 
     handlers = {
         "feishu_send_message": feishu_send_message,
+        "feishu_send_card": feishu_send_card,
         "feishu_read_bitable": feishu_read_bitable,
         "feishu_write_bitable": feishu_write_bitable,
         "feishu_create_approval": feishu_create_approval,

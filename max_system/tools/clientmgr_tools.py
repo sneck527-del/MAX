@@ -1,4 +1,8 @@
-"""客户管理MCP工具 — 飞书多维表格持久化 + 内存缓存"""
+"""客户管理MCP工具 — 飞书多维表格持久化 + 内存缓存
+
+Supports multi-tenant workspace isolation via per-workspace client dicts.
+Each workspace_id maps to its own (_clients_db, _bitable_mapping, _cache_loaded).
+"""
 
 import json
 import logging
@@ -9,13 +13,74 @@ from max_system.config.settings import MaxSettings
 
 logger = logging.getLogger(__name__)
 
-# ============ 内存缓存 ============
+# ============ 当前活跃 workspace ============
 
-_clients_db: dict[str, dict] = {}          # client_id → client dict
-_client_bitable_mapping: dict[str, str] = {}  # client_id → bitable record_id
-_cache_loaded: bool = False
+_current_ws_id: str = ""
+
+# ============ Per-workspace 内存缓存 ============
+
+# workspace_id -> client_id -> client dict
+_workspace_clients: dict[str, dict[str, dict]] = {}
+_workspace_bitable_mapping: dict[str, dict[str, str]] = {}  # ws_id -> {client_id -> record_id}
+_workspace_cache_loaded: dict[str, bool] = {}
 _settings: MaxSettings | None = None
 _api_client: Any = None  # lazy import FeishuApiClient
+
+
+def set_current_workspace(ws_id: str) -> None:
+    """Switch the active workspace for client operations."""
+    global _current_ws_id
+    _current_ws_id = ws_id
+
+
+def get_current_workspace() -> str:
+    """Get the current workspace ID."""
+    return _current_ws_id
+
+
+def _get_clients_db() -> dict[str, dict]:
+    """Return the client dict for the current workspace, or the global one as fallback."""
+    if _current_ws_id:
+        if _current_ws_id not in _workspace_clients:
+            _workspace_clients[_current_ws_id] = {}
+        return _workspace_clients[_current_ws_id]
+    # Fallback to module-level globals for backward compat
+    global _clients_db
+    return _clients_db
+
+
+def _get_bitable_mapping() -> dict[str, str]:
+    """Return the bitable mapping for the current workspace."""
+    if _current_ws_id:
+        if _current_ws_id not in _workspace_bitable_mapping:
+            _workspace_bitable_mapping[_current_ws_id] = {}
+        return _workspace_bitable_mapping[_current_ws_id]
+    global _client_bitable_mapping
+    return _client_bitable_mapping
+
+
+def _get_cache_loaded() -> bool:
+    """Return whether the cache is loaded for the current workspace."""
+    if _current_ws_id:
+        return _workspace_cache_loaded.get(_current_ws_id, False)
+    global _cache_loaded
+    return _cache_loaded
+
+
+def _set_cache_loaded(value: bool) -> None:
+    """Set the cache loaded flag for the current workspace."""
+    if _current_ws_id:
+        _workspace_cache_loaded[_current_ws_id] = value
+    else:
+        global _cache_loaded
+        _cache_loaded = value
+
+
+# ============ Module-level globals (backward compat for CLI mode) ============
+
+_clients_db: dict[str, dict] = {}
+_client_bitable_mapping: dict[str, str] = {}
+_cache_loaded: bool = False
 
 # ============ 字段名映射（内部key ↔ 多维表格中文field name）============
 
@@ -36,22 +101,37 @@ INTERNAL_TO_BITABLE = {
     "remark": "备注",
     "created_at": "录入时间",
     "follow_up_at": "跟进时间",
+    "preferences": "客户偏好",
+    "last_contact": "最后联系时间",
+    "updated_at": "最后更新时间",
 }
 BITABLE_TO_INTERNAL = {v: k for k, v in INTERNAL_TO_BITABLE.items()}
 
 
 def _to_bitable_fields(client_data: dict) -> dict:
-    """将内部client dict转为bitable field_name→value格式"""
-    return {INTERNAL_TO_BITABLE.get(k, k): v for k, v in client_data.items() if v is not None and v != ""}
+    """将内部client dict转为bitable field_name→value格式。dict类型值序列化为JSON字符串。"""
+    result = {}
+    for k, v in client_data.items():
+        if v is None or v == "":
+            continue
+        if isinstance(v, dict):
+            v = json.dumps(v, ensure_ascii=False)
+        result[INTERNAL_TO_BITABLE.get(k, k)] = v
+    return result
 
 
 def _from_bitable_fields(fields: dict, field_map: dict[str, str]) -> dict:
-    """将bitable返回的field_id→value转为内部client dict"""
+    """将bitable返回的field_id→value转为内部client dict。JSON字符串值反序列化为dict。"""
     result = {}
     for fid, fname in field_map.items():
         internal_key = BITABLE_TO_INTERNAL.get(fname, fname)
         val = fields.get(fid)
         if val is not None:
+            if internal_key in ("preferences",):
+                try:
+                    val = json.loads(val) if isinstance(val, str) else val
+                except (json.JSONDecodeError, TypeError):
+                    val = {}
             result[internal_key] = val
     return result
 
@@ -72,17 +152,19 @@ def _ensure_api_client():
 
 async def _load_from_bitable() -> bool:
     """从多维表格加载客户数据到内存缓存。返回是否成功。"""
-    global _cache_loaded
-    if _cache_loaded:
+    if _get_cache_loaded():
         return True
     if not _settings or not _settings.feishu_bitable_app_token:
-        _cache_loaded = True
+        _set_cache_loaded(True)
         return False
 
     _ensure_api_client()
     if _api_client is None:
-        _cache_loaded = True
+        _set_cache_loaded(True)
         return False
+
+    db = _get_clients_db()
+    mapping = _get_bitable_mapping()
 
     try:
         table_id = _get_client_table_id()
@@ -106,14 +188,14 @@ async def _load_from_bitable() -> bool:
             client_data = _from_bitable_fields(fields, field_map)
             cid = client_data.get("client_id", "")
             if cid:
-                _clients_db[cid] = client_data
-                _client_bitable_mapping[cid] = record_id
+                db[cid] = client_data
+                mapping[cid] = record_id
 
-        logger.info("从多维表格加载 %d 条客户记录", len(all_records))
+        logger.info("从多维表格加载 %d 条客户记录 (ws=%s)", len(all_records), _current_ws_id or "global")
     except Exception as e:
         logger.warning("从多维表格加载客户数据失败: %s，使用内存模式", e)
 
-    _cache_loaded = True
+    _set_cache_loaded(True)
     return True
 
 
@@ -121,7 +203,9 @@ async def _sync_to_bitable(client_id: str) -> str | None:
     """将客户数据同步到多维表格。返回 record_id。"""
     if not _settings or not _settings.feishu_bitable_app_token:
         return None
-    if client_id not in _clients_db:
+
+    db = _get_clients_db()
+    if client_id not in db:
         return None
 
     _ensure_api_client()
@@ -129,8 +213,9 @@ async def _sync_to_bitable(client_id: str) -> str | None:
         return None
 
     table_id = _get_client_table_id()
-    fields = _to_bitable_fields(_clients_db[client_id])
-    record_id = _client_bitable_mapping.get(client_id)
+    fields = _to_bitable_fields(db[client_id])
+    mapping = _get_bitable_mapping()
+    record_id = mapping.get(client_id)
 
     try:
         if record_id:
@@ -140,7 +225,7 @@ async def _sync_to_bitable(client_id: str) -> str | None:
             new_records = result.get("data", {}).get("records", [])
             if new_records:
                 record_id = new_records[0].get("record_id", "")
-                _client_bitable_mapping[client_id] = record_id
+                mapping[client_id] = record_id
         return record_id
     except Exception as e:
         logger.warning("同步客户 %s 到多维表格失败: %s", client_id, e)
@@ -152,6 +237,7 @@ async def _sync_to_bitable(client_id: str) -> str | None:
 
 async def clientmgr_create_client(args: dict) -> dict:
     client_id = f"C{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    now = datetime.now().isoformat()
     client = {
         "client_id": client_id,
         "name": args.get("name", ""),
@@ -167,10 +253,14 @@ async def clientmgr_create_client(args: dict) -> dict:
         "intent": args.get("intent", "待评估"),
         "follower": args.get("follower", ""),
         "remark": args.get("remark", ""),
-        "created_at": datetime.now().isoformat(),
+        "created_at": now,
         "follow_up_at": "",
+        "preferences": {},
+        "last_contact": now,
+        "updated_at": now,
     }
-    _clients_db[client_id] = client
+    db = _get_clients_db()
+    db[client_id] = client
     # 同步到多维表格（后台执行，不阻塞返回）
     await _sync_to_bitable(client_id)
 
@@ -186,10 +276,13 @@ async def clientmgr_update_client(args: dict) -> dict:
 
     await _load_from_bitable()  # 确保缓存加载
 
-    if client_id not in _clients_db:
+    db = _get_clients_db()
+    if client_id not in db:
         return {"content": [{"type": "text", "text": f"客户 {client_id} 不存在"}], "is_error": True}
-    _clients_db[client_id].update(updates)
-    _clients_db[client_id]["updated_at"] = datetime.now().isoformat()
+    db[client_id].update(updates)
+    now = datetime.now().isoformat()
+    db[client_id]["updated_at"] = now
+    db[client_id]["last_contact"] = now
     await _sync_to_bitable(client_id)
 
     return {"content": [{"type": "text", "text": json.dumps({
@@ -204,7 +297,8 @@ async def clientmgr_query_clients(args: dict) -> dict:
     status = args.get("status", "")
     intent = args.get("intent", "")
     results = []
-    for client in _clients_db.values():
+    db = _get_clients_db()
+    for client in db.values():
         if name and name not in client.get("name", "").lower():
             continue
         if status and status != client.get("status", ""):
@@ -217,13 +311,97 @@ async def clientmgr_query_clients(args: dict) -> dict:
 
 async def clientmgr_sync_client(client_id: str) -> dict:
     """供其他模块调用的公开同步接口：将指定客户同步到多维表格"""
-    if client_id not in _clients_db:
+    db = _get_clients_db()
+    if client_id not in db:
         return {"success": False, "message": f"客户 {client_id} 不存在"}
     record_id = await _sync_to_bitable(client_id)
     return {"success": True, "record_id": record_id, "message": "已同步"}
 
 
 # ============ 客户标签与报表 ============
+
+async def clientmgr_save_preference(args: dict) -> dict:
+    """保存客户偏好，持久化存储，跨会话可用。"""
+    await _load_from_bitable()
+
+    client_id = args.get("client_id", "")
+    client_name = args.get("client_name", "")
+    key = args.get("key", "").strip()
+    value = args.get("value", "").strip()
+
+    if not key or not value:
+        return {"content": [{"type": "text", "text": "缺少必要参数: key 和 value 不能为空"}]}
+
+    db = _get_clients_db()
+    entry = None
+    if client_id and client_id in db:
+        entry = db[client_id]
+    elif client_name:
+        for c in db.values():
+            if c.get("name", "").lower() == client_name.lower():
+                entry = c
+                client_id = c.get("client_id", "")
+                break
+
+    if entry is None:
+        identifier = client_id or client_name
+        return {"content": [{"type": "text", "text": f"客户 {identifier} 不存在"}]}
+
+    if "preferences" not in entry or not isinstance(entry.get("preferences"), dict):
+        entry["preferences"] = {}
+
+    entry["preferences"][key] = value
+    entry["last_contact"] = datetime.now().isoformat()
+
+    await _sync_to_bitable(client_id)
+
+    return {"content": [{"type": "text", "text": json.dumps({
+        "success": True,
+        "client_id": client_id,
+        "client_name": entry.get("name", ""),
+        "key": key,
+        "value": value,
+        "message": f"已保存客户 {entry.get('name', '')} 的偏好: {key}={value}",
+        "all_preferences": entry["preferences"],
+    }, ensure_ascii=False)}]}
+
+
+async def clientmgr_get_preferences(args: dict) -> dict:
+    """获取客户的所有存储偏好。"""
+    await _load_from_bitable()
+
+    client_id = args.get("client_id", "")
+    client_name = args.get("client_name", "")
+
+    db = _get_clients_db()
+    entry = None
+    if client_id and client_id in db:
+        entry = db[client_id]
+    elif client_name:
+        for c in db.values():
+            if c.get("name", "").lower() == client_name.lower():
+                entry = c
+                break
+
+    if entry is None:
+        identifier = client_id or client_name
+        return {"content": [{"type": "text", "text": f"客户 {identifier} 不存在"}]}
+
+    prefs = entry.get("preferences", {})
+    if not prefs or not isinstance(prefs, dict):
+        return {"content": [{"type": "text", "text": json.dumps({
+            "client_id": entry.get("client_id", ""),
+            "client_name": entry.get("name", ""),
+            "preferences": {},
+            "message": f"客户 {entry.get('name', '')} 暂无存储的偏好信息",
+        }, ensure_ascii=False)}]}
+
+    return {"content": [{"type": "text", "text": json.dumps({
+        "client_id": entry.get("client_id", ""),
+        "client_name": entry.get("name", ""),
+        "preferences": prefs,
+    }, ensure_ascii=False)}]}
+
 
 async def client_tag_and_report(args: dict) -> dict:
     """客户标签化管理 + 跟进报表 + 逾期预警"""
@@ -232,11 +410,13 @@ async def client_tag_and_report(args: dict) -> dict:
     tag_client_id = args.get("client_id", "")
     tag_labels = args.get("labels", "")
 
+    db = _get_clients_db()
+
     if action == "tag" and tag_client_id and tag_labels:
-        if tag_client_id in _clients_db:
+        if tag_client_id in db:
             labels = [l.strip() for l in tag_labels.split(",") if l.strip()]
-            _clients_db[tag_client_id]["tags"] = labels
-            _clients_db[tag_client_id]["updated_at"] = datetime.now().isoformat()
+            db[tag_client_id]["tags"] = labels
+            db[tag_client_id]["updated_at"] = datetime.now().isoformat()
             return {"content": [{"type": "text", "text": json.dumps({
                 "success": True, "client_id": tag_client_id, "labels": labels,
             }, ensure_ascii=False)}]}
@@ -251,7 +431,7 @@ async def client_tag_and_report(args: dict) -> dict:
     }
 
     auto_tags = {}
-    for cid, c in _clients_db.items():
+    for cid, c in db.items():
         tags = []
         intent = c.get("intent", "")
         if intent == "高":
@@ -282,7 +462,7 @@ async def client_tag_and_report(args: dict) -> dict:
     if action == "overdue":
         now = datetime.now()
         overdue = []
-        for cid, c in _clients_db.items():
+        for cid, c in db.items():
             updated = c.get("updated_at", "")
             if updated and c.get("status") in ("新建", "跟进中"):
                 try:
@@ -305,10 +485,10 @@ async def client_tag_and_report(args: dict) -> dict:
             "建议动作": "逐一联系客户，更新跟进状态",
         }, ensure_ascii=False, indent=2)}]}
 
-    total = len(_clients_db)
+    total = len(db)
     by_intent = {"高": 0, "中": 0, "低": 0, "待评估": 0}
     by_status = {}
-    for c in _clients_db.values():
+    for c in db.values():
         i = c.get("intent", "待评估")
         by_intent[i] = by_intent.get(i, 0) + 1
         s = c.get("status", "未知")
@@ -378,6 +558,32 @@ TOOL_DEFS = [
         },
     },
     {
+        "name": "clientmgr_save_preference",
+        "description": "保存客户偏好信息，持久化存储跨会话可用。可记录风格偏好、颜色偏好、预算敏感度等任何偏好类型。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "client_id": {"type": "string", "description": "客户编号（与client_name二选一）"},
+                "client_name": {"type": "string", "description": "客户姓名（与client_id二选一）"},
+                "key": {"type": "string", "description": "偏好名称，如'风格偏好'、'颜色偏好'、'预算敏感度'"},
+                "value": {"type": "string", "description": "偏好值，如'新中式'、'暖色调'、'高'"},
+            },
+            "required": ["key", "value"],
+        },
+    },
+    {
+        "name": "clientmgr_get_preferences",
+        "description": "获取客户的所有存储偏好信息。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "client_id": {"type": "string", "description": "客户编号（与client_name二选一）"},
+                "client_name": {"type": "string", "description": "客户姓名（与client_id二选一）"},
+            },
+            "required": [],
+        },
+    },
+    {
         "name": "client_tag_and_report",
         "description": "客户标签化管理、统计报表与逾期预警。支持report/tag/overdue三种操作。",
         "parameters": {
@@ -400,6 +606,8 @@ def register_tools(settings: MaxSettings):
         "clientmgr_create_client": clientmgr_create_client,
         "clientmgr_update_client": clientmgr_update_client,
         "clientmgr_query_clients": clientmgr_query_clients,
+        "clientmgr_save_preference": clientmgr_save_preference,
+        "clientmgr_get_preferences": clientmgr_get_preferences,
         "client_tag_and_report": client_tag_and_report,
     }
     return [(d["name"], handlers[d["name"]], d) for d in TOOL_DEFS]

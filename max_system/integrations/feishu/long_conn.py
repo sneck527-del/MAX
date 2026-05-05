@@ -23,9 +23,11 @@ class FeishuLongConn:
         self,
         settings: MaxSettings,
         on_message: Callable[[dict], Awaitable[None]],
+        on_card_action: Callable[[dict], Awaitable[None]] | None = None,
     ):
         self.settings = settings
         self.on_message = on_message
+        self.on_card_action = on_card_action
         self._ws_client = None
         self._main_loop: asyncio.AbstractEventLoop | None = None
 
@@ -54,6 +56,10 @@ class FeishuLongConn:
 
             # 注册消息接收事件
             handler_builder.register_p2_im_message_receive_v1(self._handle_message_event)
+
+            # 注册卡片交互事件
+            if self.on_card_action is not None:
+                handler_builder.register_p2_card_action_trigger(self._handle_card_action_event)
 
             handler = handler_builder.build()
 
@@ -126,6 +132,61 @@ class FeishuLongConn:
 
         except Exception as e:
             logger.error("处理飞书消息事件失败: %s", e, exc_info=True)
+
+    def _handle_card_action_event(self, data, **kwargs):
+        """处理飞书卡片交互事件（同步回调）"""
+        try:
+            logger.info("========== 收到飞书卡片交互事件 ==========")
+            logger.info("data type: %s", type(data).__name__)
+
+            event_data = data.event if hasattr(data, 'event') else data
+            if event_data is None:
+                logger.warning("卡片交互事件 data.event 为空，跳过")
+                return
+
+            action = event_data.action if hasattr(event_data, 'action') else None
+            operator = event_data.operator if hasattr(event_data, 'operator') else None
+            context = event_data.context if hasattr(event_data, 'context') else None
+
+            if action is None:
+                logger.warning("卡片交互缺少 action 数据，跳过")
+                return
+
+            action_value = action.value if hasattr(action, 'value') else {}
+            form_value = action.form_value if hasattr(action, 'form_value') else {}
+            action_tag = action.tag if hasattr(action, 'tag') else ""
+
+            open_chat_id = context.open_chat_id if context and hasattr(context, 'open_chat_id') else ""
+            open_message_id = context.open_message_id if context and hasattr(context, 'open_message_id') else ""
+
+            user_id = ""
+            if operator:
+                user_id = operator.open_id if hasattr(operator, 'open_id') and operator.open_id else ""
+                if not user_id:
+                    user_id = operator.user_id if hasattr(operator, 'user_id') and operator.user_id else ""
+
+            logger.info("卡片交互: action=%s, value=%s, form_values=%d, chat=%s, user=%s",
+                       action_tag, str(action_value)[:100], len(form_value) if form_value else 0,
+                       open_chat_id[:10] if open_chat_id else "N/A",
+                       user_id[:10] if user_id else "N/A")
+
+            payload = {
+                "message_type": "card_action",
+                "chat_id": open_chat_id,
+                "user_id": user_id,
+                "message_id": open_message_id,
+                "text": json.dumps({"action_value": action_value, "form_value": form_value}, ensure_ascii=False),
+                "action_value": action_value,
+                "form_value": form_value,
+                "is_mentioned": False,
+            }
+
+            if self._main_loop and not self._main_loop.is_closed():
+                asyncio.run_coroutine_threadsafe(self.on_card_action(payload), self._main_loop)
+                logger.info("已调度卡片交互到主事件循环")
+
+        except Exception as e:
+            logger.error("处理卡片交互事件失败: %s", e, exc_info=True)
 
     def _extract_text(self, content, message_type: str) -> str:
         """提取消息文本"""

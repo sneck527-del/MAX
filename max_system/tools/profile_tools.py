@@ -1,4 +1,10 @@
-"""设计师Profile工具：对话式自定义公司信息"""
+"""设计师Profile工具：对话式自定义公司信息
+
+Supports multi-tenant workspace isolation: tools check the _current_workspace
+context variable (imported from orchestrator). If a workspace is active, its
+ProfileManager is used. Otherwise, the global _profile_mgr (CLI mode) is used
+as a fallback.
+"""
 
 import json
 import logging
@@ -10,19 +16,29 @@ logger = logging.getLogger(__name__)
 _profile_mgr: ProfileManager | None = None
 
 
+def _get_active_profile_mgr() -> ProfileManager | None:
+    """Return the workspace ProfileManager if active, else global fallback."""
+    from max_system.core.orchestrator import _current_workspace
+    ws = _current_workspace.get(None)
+    if ws is not None and ws.profile is not None:
+        return ws.profile
+    return _profile_mgr
+
+
 async def profile_get(args: dict) -> dict:
-    if _profile_mgr is None:
+    mgr = _get_active_profile_mgr()
+    if mgr is None:
         return {"content": [{"type": "text", "text": "Profile系统未初始化"}]}
 
     key = args.get("key", "")
     if key:
         key = resolve_key(key)
-        value = await _profile_mgr.get(key)
+        value = await mgr.get(key)
         if value:
             return {"content": [{"type": "text", "text": f"{key}: {value}"}]}
         return {"content": [{"type": "text", "text": f"未找到配置项: {key}"}]}
 
-    profile = await _profile_mgr.get_all()
+    profile = await mgr.get_all()
     lines = []
     for k, v in profile.items():
         if v:
@@ -32,7 +48,8 @@ async def profile_get(args: dict) -> dict:
 
 
 async def profile_update(args: dict) -> dict:
-    if _profile_mgr is None:
+    mgr = _get_active_profile_mgr()
+    if mgr is None:
         return {"content": [{"type": "text", "text": "Profile系统未初始化"}]}
 
     updates = args.get("updates", {})
@@ -45,17 +62,18 @@ async def profile_update(args: dict) -> dict:
             return {"content": [{"type": "text", "text": "请指定要修改的配置项"}]}
         updates = {key: value}
 
-    await _profile_mgr.set_many(updates)
+    await mgr.set_many(updates)
     summary = ", ".join(f"{k}={v}" for k, v in updates.items())
     logger.info("Profile更新: %s", summary)
     return {"content": [{"type": "text", "text": f"已更新: {summary}"}]}
 
 
 async def profile_reset(args: dict) -> dict:
-    if _profile_mgr is None:
+    mgr = _get_active_profile_mgr()
+    if mgr is None:
         return {"content": [{"type": "text", "text": "Profile系统未初始化"}]}
 
-    await _profile_mgr.reset()
+    await mgr.reset()
     return {"content": [{"type": "text", "text": "Profile已重置为默认值"}]}
 
 

@@ -69,6 +69,8 @@ class LLMClient:
         max_tokens: int | None = None,
     ) -> dict:
         """非流式对话补全"""
+        from max_system.utils.retry import retry_with_backoff
+
         kwargs: dict = {
             "model": self._model,
             "messages": messages,
@@ -80,8 +82,11 @@ class LLMClient:
             kwargs["tool_choice"] = "auto"
 
         kwargs["messages"] = LLMClient._sanitize(messages)
-        response = await self._client.chat.completions.create(**kwargs)
-        return response
+
+        async def _call():
+            return await self._client.chat.completions.create(**kwargs)
+
+        return await retry_with_backoff(_call, max_retries=3, base_delay=1.0)
 
     async def chat_stream(
         self,

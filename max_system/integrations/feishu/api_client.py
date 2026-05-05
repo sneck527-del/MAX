@@ -322,6 +322,7 @@ class FeishuApiClient:
 
     # ============ 审批 ============
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def create_approval(
         self,
         approval_code: str,
@@ -344,6 +345,7 @@ class FeishuApiClient:
 
     # ============ 日历 ============
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def create_calendar_event(
         self,
         calendar_id: str,
@@ -367,6 +369,7 @@ class FeishuApiClient:
         resp.raise_for_status()
         return resp.json()
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def list_calendar_events(
         self,
         calendar_id: str,
@@ -392,6 +395,7 @@ class FeishuApiClient:
         resp.raise_for_status()
         return resp.json()
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def delete_calendar_event(self, calendar_id: str, event_id: str) -> dict:
         """删除日历事件"""
         headers = await self._headers()
@@ -404,6 +408,7 @@ class FeishuApiClient:
 
     # ============ 任务 ============
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def create_task(
         self,
         summary: str,
@@ -429,6 +434,7 @@ class FeishuApiClient:
         resp.raise_for_status()
         return resp.json()
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def list_tasks(
         self,
         start_time: str = "",
@@ -456,6 +462,7 @@ class FeishuApiClient:
         resp.raise_for_status()
         return resp.json()
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def complete_task(self, task_id: str) -> dict:
         """完成任务"""
         headers = await self._headers()
@@ -467,6 +474,7 @@ class FeishuApiClient:
         resp.raise_for_status()
         return resp.json()
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
     async def add_task_reminder(self, task_id: str, relative_fire_minute: int = 30) -> dict:
         """给任务添加提醒"""
         headers = await self._headers()

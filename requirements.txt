@@ -1,7 +1,5 @@
 openai>=1.0
 lark-oapi>=1.5.5
-fastapi>=0.115.0
-uvicorn>=0.31.0
 pydantic>=2.11
 pydantic-settings>=2.5
 chromadb>=0.5.0
