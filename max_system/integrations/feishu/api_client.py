@@ -307,6 +307,101 @@ class FeishuApiClient:
         self._field_cache.set(table_id, mapping)
         return mapping
 
+    # ============ 文件操作 ============
+
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def upload_file(
+        self,
+        file_path: str,
+        file_type: str = "stream",
+    ) -> str:
+        """上传文件到飞书，返回 file_key
+
+        Args:
+            file_path: 本地文件路径
+            file_type: 文件类型 (stream/bmp/jpeg/png/mp4/pdf/doc)
+
+        Returns:
+            str: 上传成功后的 file_key，失败返回空字符串
+        """
+        from pathlib import Path
+
+        path = Path(file_path)
+        token = await self._get_tenant_token()
+        file_size = path.stat().st_size
+        file_name = path.name
+
+        resp = await self._http.post(
+            "https://open.feishu.cn/open-apis/im/v1/files",
+            headers={"Authorization": f"Bearer {token}"},
+            data={
+                "file_type": file_type,
+                "file_name": file_name,
+            },
+            files={
+                "file": (file_name, path.open("rb"), "application/octet-stream"),
+            },
+            timeout=60.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("code") == 0:
+            return data.get("data", {}).get("file_key", "")
+        logger.warning("上传文件失败: %s", data.get("msg", ""))
+        return ""
+
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def download_file(self, message_id: str, file_key: str) -> bytes:
+        """下载飞书消息中的文件（二进制内容）
+
+        Args:
+            message_id: 消息ID
+            file_key: 文件在消息中的key
+
+        Returns:
+            bytes: 文件二进制内容
+        """
+        headers = await self._headers()
+        headers.pop("Content-Type", None)  # 下载文件不需要 Content-Type
+        resp = await self._http.get(
+            f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}/resources/{file_key}",
+            params={"type": "file"},
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.content
+
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def download_file_by_key(self, file_key: str) -> bytes:
+        """通过 file_key 下载飞书文件（适用于获取已上传文件内容）
+
+        Args:
+            file_key: 文件key（从文件消息的content中获取）
+
+        Returns:
+            bytes: 文件二进制内容
+        """
+        # 尝试使用通用文件下载接口
+        headers = await self._headers()
+        headers.pop("Content-Type", None)
+        resp = await self._http.get(
+            f"https://open.feishu.cn/open-apis/im/v1/files/{file_key}",
+            headers=headers,
+        )
+        resp.raise_for_status()
+        # 响应是二进制内容
+        if resp.headers.get("content-type", "").startswith("application/json"):
+            # 有些情况下返回JSON（含下载URL）
+            data = resp.json()
+            if data.get("code") == 0 and "data" in data:
+                download_url = data["data"].get("url", "")
+                if download_url:
+                    dl_resp = await self._http.get(download_url)
+                    dl_resp.raise_for_status()
+                    return dl_resp.content
+            raise RuntimeError(f"下载文件失败: {data.get('msg', '')}")
+        return resp.content
+
     # ============ 消息操作 ============
 
     @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
@@ -482,6 +577,49 @@ class FeishuApiClient:
             f"https://open.feishu.cn/open-apis/task/v1/tasks/{task_id}/reminders",
             headers=headers,
             content=json.dumps({"relative_fire_minute": relative_fire_minute}).encode("utf-8"),
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    # ============ 云文档 ============
+
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def create_doc(self, title: str) -> dict:
+        """创建飞书云文档，返回 document_id 和 URL"""
+        headers = await self._headers()
+        resp = await self._http.post(
+            "https://open.feishu.cn/open-apis/docx/v1/documents",
+            headers=headers,
+            json={"title": title},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        doc_id = data.get("data", {}).get("document", {}).get("document_id", "")
+        return {"document_id": doc_id, "url": f"https://bytedance.feishu.cn/docx/{doc_id}"}
+
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def get_doc_root_block(self, document_id: str) -> dict:
+        """获取文档根块ID"""
+        headers = await self._headers()
+        resp = await self._http.get(
+            f"https://open.feishu.cn/open-apis/docx/v1/documents/{document_id}/blocks",
+            headers=headers,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        for item in data.get("data", {}).get("items", []):
+            if item.get("block_type") == 1:  # page block = root
+                return item
+        return {}
+
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def add_doc_blocks(self, document_id: str, parent_block_id: str, blocks: list[dict]) -> dict:
+        """向文档添加内容块"""
+        headers = await self._headers()
+        resp = await self._http.post(
+            f"https://open.feishu.cn/open-apis/docx/v1/documents/{document_id}/blocks/{parent_block_id}/children",
+            headers=headers,
+            json={"children": blocks},
         )
         resp.raise_for_status()
         return resp.json()

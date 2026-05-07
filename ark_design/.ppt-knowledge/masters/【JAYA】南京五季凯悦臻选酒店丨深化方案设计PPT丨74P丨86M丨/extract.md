@@ -1,0 +1,845 @@
+# 【JAYA】南京五季凯悦臻选酒店丨深化方案设计PPT丨74P丨86M丨.pptx
+
+- 页数：74
+- 大小：87905KB
+- 处理时间：2026-04-28 23:50
+
+---
+
+## 第 1 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 2 页
+
+### CONTENTS
+
+### PUBLIC AREA
+
+### RECEPTION AND LOBBY LOUNGE
+
+### Building 02 - Level 1 Layout Plan  Enlarged Reception Layout Plan  Reception Elevations
+
+### Reception Furniture Selection  Reception Material Scheme  Reception Rendering
+
+### Enlarged Lobby Lounge Layout Plan  Lobby Lounge Elevation
+
+### Lobby Lounge Rendering  Lobby Lounge Material Scheme
+
+### Lobby Lounge Furniture Selection
+
+### Public Area Artwork And Accessories Intent
+
+### CHINESE RESTAURANT
+
+### Enlarged Ala Carte Dining Layout Plan  Enlarged Ala Carte Dining Ceiling Plan  Ala Carte Dining Elevation
+
+### Ala Carte Dining Rendering
+
+### Ala Carte Dining Furniture Selection  Enlarged Private Dining Room Layout Plan  Enlarged Private Dining Room Ceiling Plan  PDR 1 Elevation
+
+### PDR 1 Rendering
+
+### Chinese Restaurant Material Scheme  PDR 1 Furniture Selection
+
+### Chinese Restaurant Artwork And Accessories Intent
+
+### GRAND BALLROOM
+
+### Building 02 - Level 4 Layout Plan  Grand Ballroom Layout Plan  Grand Ballroom Elevations  Grand Ballroom Renderings  Grand Ballroom Material Scheme
+
+### Grand Ballroom Furniture Selection
+
+### SWIMMING POOL
+
+### Swimming Pool Layout Plan  Swimming Pool Elevations  Swimming Pool Renderings  Swimming Pool Material Scheme  Swimming Pool Furniture Selection
+
+### Swimming Pool Artwork And Accessories Intent
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+INDEX
+
+---
+
+## 第 3 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+### MAIN RECEPTION
+
+---
+
+## 第 4 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 5 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 6 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 7 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 8 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 9 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 10 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 11 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 12 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 13 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+RECEPTION – RENDERING
+
+---
+
+## 第 14 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+### LOBBY LOUNGE
+
+---
+
+## 第 15 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 16 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 17 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 18 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 19 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 20 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 21 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 22 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 23 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 24 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02 LEVEL 1 –  LAYOUT PLAN
+
+---
+
+## 第 25 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+LOBBY LOUNGE – RENDERING
+
+---
+
+## 第 26 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+RECEPTION AND LOBBY LOUNGE– MATERIAL SCHEME
+
+### Timber For Millwork
+
+### Stone For Furniture
+
+### Stone For Floor
+
+### Paint For Wall
+
+### Eggshell Finish For Furniture
+
+### Bamboo Blind
+
+### General Metal Finish
+
+### Fabric For Throw Pillow
+
+### Lacquer Finish For Furniture
+
+### Fabric For Throw Pillow
+
+### Leather For Upholstery
+
+---
+
+## 第 27 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+RECEPTION AND LOBBY LOUNGE– FURNITURE SELECTION
+
+---
+
+## 第 28 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+RECEPTION AND LOBBY LOUNGE – ART AND ACCESSORIES INTENT
+
+---
+
+## 第 29 页
+
+### CHINESE RESTAURANT
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 30 页
+
+### ALA CARTE DINING
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 31 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING  ZONING PLAN
+
+---
+
+## 第 32 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING ZONING CEILING PLAN
+
+---
+
+## 第 33 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING ELEVATION
+
+---
+
+## 第 34 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING ELEVATION
+
+---
+
+## 第 35 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING ELEVATION
+
+---
+
+## 第 36 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING ELEVATION
+
+---
+
+## 第 37 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING ELEVATION
+
+---
+
+## 第 38 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING ELEVATION
+
+---
+
+## 第 39 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING RENDERING
+
+---
+
+## 第 40 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALA CARTE DINING RENDERING
+
+---
+
+## 第 41 页
+
+### Furniture Sketches And Materials
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+ALACARTE DINING - FURNITURE SELECTION
+
+---
+
+## 第 42 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+### PRIVATE DINING ROOM
+
+---
+
+## 第 43 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM ZONING  PLAN
+
+---
+
+## 第 44 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM ZONING CEILING PLAN
+
+---
+
+## 第 45 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM ELEVATION
+
+---
+
+## 第 46 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM ELEVATION
+
+---
+
+## 第 47 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM ELEVATION
+
+---
+
+## 第 48 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM ELEVATION
+
+---
+
+## 第 49 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM RENDERING
+
+---
+
+## 第 50 页
+
+### Timber For Millwork
+
+### Stone For Furniture
+
+### Timber For Floor
+
+### Rattan For Wall
+
+### Wallcovering
+
+### Stone For Floor
+
+### Fabric For Throw Pillow
+
+### Fabric For Throw Pillow
+
+### Fabric For Upholstery
+
+### Eggshell Finish For Wall
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+CHINESE RESTAURANT – MATERIAL SCHEME
+
+---
+
+## 第 51 页
+
+### Furniture Sketches And Materials
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+PRIVATE DINING ROOM - FURNITURE SELECTION
+
+---
+
+## 第 52 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+CHINESE RESTAURANT – ARTWORK AND ACCESSORIES INTENT
+
+---
+
+## 第 53 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+### GRAND BALLROOM
+
+---
+
+## 第 54 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 55 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 56 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 57 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 58 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 59 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 60 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+GRAND BALLROOM RENDERING
+
+---
+
+## 第 61 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BALLROOM – MATERIAL SCHEME
+
+### Timber For Millwork
+
+### Stone For Skirting
+
+### Metal For Door
+
+### Timber For Furniture
+
+### Fabric For Wall
+
+### Wall to  wall carpet
+
+### Timber For Furniture
+
+---
+
+## 第 62 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BALLROOM - FURNITURE SELECTION
+
+### Furniture Details Design And Materials
+
+---
+
+## 第 63 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+### SWIMMING POOL
+
+---
+
+## 第 64 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---
+
+## 第 65 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+BUILDING 02  POOL –  LAYOUT PLAN
+
+---
+
+## 第 66 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+POOL AREA ELEVATION
+
+---
+
+## 第 67 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+POOL AREA ELEVATION
+
+---
+
+## 第 68 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+POOL AREA ELEVATION
+
+---
+
+## 第 69 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+POOL AREA ELEVATION
+
+---
+
+## 第 70 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+SWIMMING POOL RENDERING
+
+---
+
+## 第 71 页
+
+### Timber For Millwork
+
+### Rattan For Furniture
+
+### Stone For Wall
+
+### Stone For Floor
+
+### Mosaic For Pool
+
+### Paint For Ceiling
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+SWIMMING POOL – MATERIAL SCHEME
+
+### Fabric For Upholstery
+
+### Fabric For Upholstery
+
+### Fabric For Throw Pillow
+
+---
+
+## 第 72 页
+
+### Furniture Details Design And Materials
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+SWIMMING POOL - FURNITURE SELECTION
+
+---
+
+## 第 73 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+SWIMMING POOL – ARTWORK AND ACCESSORIES INTENT
+
+---
+
+## 第 74 页
+
+### FIVE SEASONS JINLING HOTEL
+
+NANJING, CHINA
+
+---

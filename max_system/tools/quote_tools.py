@@ -1,16 +1,36 @@
-"""报价数据MCP工具：材料库、施工库查询 + 费用汇总计算"""
+"""报价数据MCP工具：材料库、施工库查询 + 费用汇总计算 + Excel导入"""
 
 import json
 import logging
+import os
+import tempfile
 from pathlib import Path
 
 from max_system.config.settings import MaxSettings
 
 logger = logging.getLogger(__name__)
 
+# ============ 模块级全局（默认路径） ============
+
 _quote_path: Path | None = None
 _materials_db: dict | None = None
 _construction_db: dict | None = None
+_loaded_path: Path | None = None  # 跟踪缓存的workspace路径，切换时自动重载
+
+
+def _get_active_quotes_path() -> Path:
+    """获取当前活跃工作区的 quotes 路径。
+
+    优先从 workspace context 获取，回退到全局默认路径。
+    """
+    try:
+        from max_system.core.orchestrator import _current_workspace
+        ws = _current_workspace.get()
+        if ws is not None:
+            return ws.quotes_path
+    except Exception:
+        pass
+    return _quote_path or Path("quotes")
 
 
 def _load_json(path: Path) -> dict:
@@ -19,12 +39,27 @@ def _load_json(path: Path) -> dict:
     return {}
 
 
+def _seed_defaults(quotes_path: Path) -> None:
+    """如果工作区没有报价数据，从全局默认目录复制。"""
+    global _quote_path
+    default_src = _quote_path or Path("quotes")
+    for filename in ("材料库.json", "施工库.json"):
+        dst = quotes_path / filename
+        if not dst.exists():
+            src = default_src / filename
+            if src.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def _ensure_loaded():
-    global _materials_db, _construction_db
-    if _materials_db is None:
-        _materials_db = _load_json(_quote_path / "材料库.json") if _quote_path else {}
-    if _construction_db is None:
-        _construction_db = _load_json(_quote_path / "施工库.json") if _quote_path else {}
+    global _materials_db, _construction_db, _loaded_path
+    quotes_path = _get_active_quotes_path()
+    if _loaded_path != quotes_path:
+        _seed_defaults(quotes_path)
+        _materials_db = _load_json(quotes_path / "材料库.json")
+        _construction_db = _load_json(quotes_path / "施工库.json")
+        _loaded_path = quotes_path
 
 
 async def _get_fee_config() -> dict:
@@ -161,6 +196,113 @@ async def quote_calculate_summary(args: dict) -> dict:
     return {"content": [{"type": "text", "text": json.dumps(summary, ensure_ascii=False)}]}
 
 
+async def quote_import_excel(args: dict) -> dict:
+    """从飞书消息中下载Excel文件，解析并导入报价数据。
+
+    支持两种情况：
+    1. 传 file_key：从飞书消息中下载文件 → 解析 → 导入
+    2. 传 file_path：直接解析本地文件 → 导入
+    """
+    import asyncio
+
+    file_key = args.get("file_key", "")
+    file_name = args.get("file_name", "")
+    file_path = args.get("file_path", "")
+
+    temp_file = None
+    actual_path = file_path
+
+    # 从飞书下载文件
+    if file_key and not file_path:
+        # 获取 FeishuApiClient
+        try:
+            from max_system.tools.feishu_tools import _get_api_client
+            client = _get_api_client()
+        except Exception:
+            pass
+        else:
+            try:
+                # 下载文件
+                file_data = await client.download_file_by_key(file_key)
+                # 写入临时文件
+                suffix = ".xlsx"
+                if file_name:
+                    ext = os.path.splitext(file_name)[1].lower()
+                    if ext in (".xlsx", ".xls"):
+                        suffix = ext
+                tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix, prefix="max_quote_")
+                os.close(tmp_fd)
+                Path(tmp_path).write_bytes(file_data)
+                actual_path = tmp_path
+                temp_file = tmp_path
+            except Exception as e:
+                return {"content": [{"type": "text", "text": json.dumps({
+                    "success": False,
+                    "message": f"从飞书下载文件失败: {e}",
+                }, ensure_ascii=False)}]}
+
+    if not actual_path:
+        return {"content": [{"type": "text", "text": json.dumps({
+            "success": False,
+            "message": "请提供 file_key（从飞书下载）或 file_path（本地文件路径）",
+        }, ensure_ascii=False)}]}
+
+    try:
+        from max_system.integrations.quotes.excel_importer import parse_excel, save_to_workspace
+
+        # 解析Excel
+        result = parse_excel(actual_path)
+        if not result["success"]:
+            # 清理临时文件
+            if temp_file:
+                try:
+                    Path(temp_file).unlink(missing_ok=True)
+                except OSError:
+                    pass
+            return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+
+        # 保存到工作区
+        quotes_path = _get_active_quotes_path()
+        save_result = save_to_workspace(result["data"], quotes_path, result["type"])
+
+        # 清除缓存，让下次查询加载新数据
+        global _materials_db, _construction_db, _loaded_path
+        _loaded_path = None
+        if result["type"] == "materials":
+            _materials_db = None
+        else:
+            _construction_db = None
+
+        # 清理临时文件
+        if temp_file:
+            try:
+                Path(temp_file).unlink(missing_ok=True)
+            except OSError:
+                pass
+
+        response = {
+            "success": True,
+            "type": result["type"],
+            "message": result["message"] + "。" + save_result["message"],
+            "rows_imported": result["rows_imported"],
+            "sheets_processed": result["sheets_processed"],
+            "saved_to": save_result["path"] if save_result["success"] else "内存（未持久化）",
+        }
+
+        return {"content": [{"type": "text", "text": json.dumps(response, ensure_ascii=False)}]}
+
+    except Exception as e:
+        if temp_file:
+            try:
+                Path(temp_file).unlink(missing_ok=True)
+            except OSError:
+                pass
+        return {"content": [{"type": "text", "text": json.dumps({
+            "success": False,
+            "message": f"导入失败: {e}",
+        }, ensure_ascii=False)}]}
+
+
 TOOL_DEFS = [
     {
         "name": "quote_query_materials",
@@ -211,6 +353,19 @@ TOOL_DEFS = [
             "required": ["items"],
         },
     },
+    {
+        "name": "quote_import_excel",
+        "description": "导入Excel报价文件到报价库。设计师发送Excel文件后使用此工具解析并导入。支持材料库和施工库两种格式，自动识别列名（类别/名称/单价等）并转为标准格式。数据会持久化到工作区，下次查询即可使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_key": {"type": "string", "description": "飞书文件消息的 file_key（从飞书下载时使用）"},
+                "file_name": {"type": "string", "description": "文件名（如：主材报价表.xlsx），用于确定扩展名"},
+                "file_path": {"type": "string", "description": "本地文件路径（直接解析本地文件时使用，CLI模式下）"},
+            },
+            "required": [],
+        },
+    },
 ]
 
 
@@ -222,5 +377,6 @@ def register_tools(settings: MaxSettings):
         "quote_query_materials": quote_query_materials,
         "quote_query_construction": quote_query_construction,
         "quote_calculate_summary": quote_calculate_summary,
+        "quote_import_excel": quote_import_excel,
     }
     return [(d["name"], handlers[d["name"]], d) for d in TOOL_DEFS]

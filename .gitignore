@@ -11,3 +11,12 @@ build/
 *.db
 .vector_index/
 *.xlsx
+
+# ARK Design
+ark_design/node_modules/
+ark_design/projects/
+ark_design/ppt/
+ark_design/.gstack/
+ark_design/data/
+ark_design/*.html
+ark_design/大理·云栖别院/

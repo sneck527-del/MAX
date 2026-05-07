@@ -1,0 +1,24 @@
+# 项目生成输出
+projects/
+
+# Claude 本地配置
+.claude/
+
+# PPT知识库图片（大文件，按需下载）
+.ppt-knowledge/masters/*/slides/
+.ppt-knowledge/masters/*/slide-images/
+
+# 设计参考PPT（大文件）
+ppt/
+
+# 生成的演示HTML
+dali-yunqi-ppt.html
+dali-yunqi-ppt-optimized.html
+demo-10page-ppt.html
+
+# 项目输出（非projects/目录下的）
+大理·云栖别院/
+
+# Node
+node_modules/
+.gstack/

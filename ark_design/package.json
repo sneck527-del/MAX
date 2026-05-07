@@ -1,0 +1,9 @@
+{
+  "name": "ark-design",
+  "version": "1.0.0",
+  "description": "ARK Design CLI — AI室内设计辩论引擎",
+  "main": "ark.js",
+  "bin": {
+    "ark": "./ark.js"
+  }
+}

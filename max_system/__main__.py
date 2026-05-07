@@ -213,11 +213,22 @@ def _run_feishu():
         print("请在 .env 中设置 LLM_API_KEY 后重试。")
         return
 
+    # 检查 ARK Design 依赖（非阻塞，仅警告）
+    import shutil
+    _node_ok = shutil.which(settings.ark_node_path) is not None
+    _ark_cli = Path(settings.ark_project_path) / "ark.js"
+    _ark_ok = _ark_cli.exists()
+
     print("=" * 60)
     print("  Max 室内设计AI助手  |  飞书长连接模式")
     print("=" * 60)
     print(f"  LLM: {settings.llm_provider} / {settings.llm_model}")
     print(f"  飞书App ID: {settings.feishu_app_id[:10] if settings.feishu_app_id else 'N/A'}...")
+    print(f"  ARK Design: {'可用' if (_node_ok and _ark_ok) else '不可用（概念提案功能禁用）'}")
+    if not _node_ok:
+        print(f"    - Node.js 未找到: {settings.ark_node_path}")
+    if not _ark_ok:
+        print(f"    - ARK CLI 未找到: {_ark_cli}")
     print("=" * 60)
 
     asyncio.run(_async_feishu())
@@ -393,6 +404,42 @@ async def _async_feishu():
                 # Wire clientmgr workspace
                 from max_system.tools.clientmgr_tools import set_current_workspace
                 set_current_workspace(chat_id)
+
+            # Excel 文件消息：自动导入报价数据
+            message_type = payload.get("message_type", "")
+            file_key = payload.get("file_key", "")
+            file_name = payload.get("file_name", "")
+            if message_type == "file" and file_key and file_name:
+                ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
+                if ext in ("xlsx", "xls"):
+                    logger.info("检测到Excel文件，自动导入: %s", file_name)
+                    await feishu_api.send_message(chat_id, f"正在解析 {file_name}，请稍候...")
+                    try:
+                        from max_system.tools.quote_tools import quote_import_excel
+                        result = await quote_import_excel({
+                            "file_key": file_key,
+                            "file_name": file_name,
+                        })
+                        result_text = result.get("content", [{}])[0].get("text", "导入完成")
+                        try:
+                            result_data = json.loads(result_text)
+                            if result_data.get("success"):
+                                msg = (
+                                    f"报价数据导入成功\n"
+                                    f"类型：{result_data.get('type', '')}\n"
+                                    f"导入行数：{result_data.get('rows_imported', 0)}\n"
+                                    f"处理工作表：{result_data.get('sheets_processed', 0)}\n"
+                                    f"保存位置：{result_data.get('saved_to', '')}"
+                                )
+                            else:
+                                msg = f"导入失败：{result_data.get('message', '未知错误')}"
+                        except json.JSONDecodeError:
+                            msg = result_text
+                        await feishu_api.send_message(chat_id, msg)
+                    except Exception as e:
+                        logger.error("Excel导入失败: %s", e, exc_info=True)
+                        await feishu_api.send_message(chat_id, f"导入失败: {e}")
+                    return
 
             # 首次使用：发送引导卡片
             if chat_id and chat_id not in _sent_onboarding_cards:

@@ -12,10 +12,22 @@
       "Bash(pip list *)",
       "Bash(timeout 60 python -m max_system cli)",
       "Bash(timeout 120 python -m max_system cli)",
-      "Bash(chcp 65001)"
+      "Bash(chcp 65001)",
+      "Read(//c/Users/sneck/.claude/skills/guizang-ppt-skill/references/**)",
+      "Read(//c/Users/sneck/.agents/skills/guizang-ppt-skill/references/**)",
+      "Read(//c/Users/sneck/.claude/skills/guizang-ppt-skill/assets/**)",
+      "Read(//c/Users/sneck/.agents/skills/guizang-ppt-skill/assets/**)",
+      "Bash(cp \"C:/Users/sneck/.claude/skills/guizang-ppt-skill/assets/template.html\" \"F:/code/ARK Design/lib/template-gz.html\")",
+      "Bash(rsync -av --exclude='.git/' --exclude='.claude/' --exclude='node_modules/' --exclude='projects/' --exclude='ppt/' --exclude='.gstack/' --exclude='*.html' --exclude='大理·云栖别院/' --exclude='data/' \"F:/code/ARK Design/\" \"f:/code/MAX/ark_design/\")",
+      "Bash(tar --exclude='.git' --exclude='.claude' --exclude='node_modules' --exclude='projects' --exclude='ppt' --exclude='.gstack' --exclude='*.html' --exclude='大理·云栖别院' --exclude='data' -cf - .)",
+      "Bash(tar -xf - -C \"f:/code/MAX/ark_design/\")"
     ],
     "additionalDirectories": [
-      "f:\\code\\MAX"
+      "f:\\code\\MAX",
+      "F:\\code\\ARK Design\\lib",
+      "F:\\code\\ARK Design\\prompts",
+      "F:\\code\\ARK Design",
+      "C:\\Users\\sneck\\.agents\\skills\\guizang-ppt-skill\\assets"
     ]
   }
 }

@@ -105,12 +105,27 @@ class FeishuLongConn:
 
             text = self._extract_text(content, message_type)
 
+            # 文件消息：提取 file_key 和 file_name
+            file_key = ""
+            file_name = ""
+            if message_type == "file":
+                if isinstance(content, str):
+                    try:
+                        content = json.loads(content)
+                    except json.JSONDecodeError:
+                        pass
+                if isinstance(content, dict):
+                    file_key = content.get("file_key", "")
+                    file_name = content.get("file_name", "")
+
             mentions = message.mentions if hasattr(message, 'mentions') else []
             is_mentioned = bool(mentions)
 
-            logger.info("收到飞书消息: chat=%s, type=%s, text=%s, mentioned=%s",
+            logger.info("收到飞书消息: chat=%s, type=%s, text=%s, file_key=%s, mentioned=%s",
                        chat_id[:10] if chat_id else "N/A", message_type,
-                       text[:80] if text else "(空)", is_mentioned)
+                       text[:80] if text else "(空)",
+                       file_key[:10] if file_key else "N/A",
+                       is_mentioned)
 
             payload = {
                 "chat_id": chat_id,
@@ -120,6 +135,8 @@ class FeishuLongConn:
                 "message_type": message_type,
                 "message_id": message_id,
                 "text": text,
+                "file_key": file_key,
+                "file_name": file_name,
                 "is_mentioned": is_mentioned,
             }
 

@@ -25,6 +25,7 @@ class Workspace:
         self.dir = base_dir / workspace_id
         self.db_path = self.dir / "max.db"
         self.knowledge_path = self.dir / "knowledge"
+        self.quotes_path = self.dir / "quotes"
         self.created_at = datetime.now(timezone.utc).isoformat()
 
         self.profile: ProfileManager | None = None

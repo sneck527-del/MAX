@@ -424,6 +424,128 @@ class TestQuoteCalculation:
         assert data["报价总计"] == data["垃圾清运费"] + data["成品保护费"]
 
 
+class TestQuoteCacheIsolation:
+    """报价缓存多工作区隔离测试"""
+
+    def test_cache_reloads_on_workspace_switch(self):
+        import sys
+        # 清除模块级缓存
+        for key in ("max_system.tools.quote_tools",):
+            if key in sys.modules:
+                del sys.modules[key]
+
+        from max_system.tools import quote_tools
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quotes_a = Path(tmpdir) / "ws_a" / "quotes"
+            quotes_b = Path(tmpdir) / "ws_b" / "quotes"
+            quotes_a.mkdir(parents=True)
+            quotes_b.mkdir(parents=True)
+
+            # 工作区A：门窗数据
+            data_a = {"门窗": {"入户门": [{"名称": "防盗门", "单价": 3000}]}}
+            (quotes_a / "材料库.json").write_text(json.dumps(data_a, ensure_ascii=False), encoding="utf-8")
+            (quotes_a / "施工库.json").write_text("{}", encoding="utf-8")
+
+            # 工作区B：地板数据
+            data_b = {"地板": {"实木地板": [{"名称": "橡木地板", "单价": 350}]}}
+            (quotes_b / "材料库.json").write_text(json.dumps(data_b, ensure_ascii=False), encoding="utf-8")
+            (quotes_b / "施工库.json").write_text("{}", encoding="utf-8")
+
+            # 用路径补丁模拟 workspace context
+            class FakeWorkspace:
+                def __init__(self, p):
+                    self.quotes_path = p
+
+            # 加载A
+            quote_tools._loaded_path = None
+            quote_tools._materials_db = None
+            quote_tools._construction_db = None
+            with patch.object(quote_tools, "_get_active_quotes_path", return_value=quotes_a):
+                quote_tools._ensure_loaded()
+                assert "门窗" in quote_tools._materials_db
+                assert "地板" not in quote_tools._materials_db
+                path_a = quote_tools._loaded_path
+
+            # 切换到B
+            with patch.object(quote_tools, "_get_active_quotes_path", return_value=quotes_b):
+                quote_tools._ensure_loaded()
+                assert "地板" in quote_tools._materials_db
+                assert "门窗" not in quote_tools._materials_db
+                path_b = quote_tools._loaded_path
+
+            assert path_a != path_b
+
+    def test_seed_defaults_copies_from_global(self):
+        import sys
+        for key in ("max_system.tools.quote_tools",):
+            if key in sys.modules:
+                del sys.modules[key]
+
+        from max_system.tools import quote_tools
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 全局默认数据
+            global_dir = Path(tmpdir) / "global_quotes"
+            global_dir.mkdir(parents=True)
+            default_data = {"门窗": {"入户门": [{"名称": "默认防盗门", "单价": 2500}]}}
+            (global_dir / "材料库.json").write_text(json.dumps(default_data, ensure_ascii=False), encoding="utf-8")
+            (global_dir / "施工库.json").write_text("{}", encoding="utf-8")
+
+            # 空白工作区
+            ws_dir = Path(tmpdir) / "ws_new" / "quotes"
+            quote_tools._quote_path = global_dir
+            quote_tools._seed_defaults(ws_dir)
+
+            assert (ws_dir / "材料库.json").exists()
+            assert (ws_dir / "施工库.json").exists()
+            saved = json.loads((ws_dir / "材料库.json").read_text(encoding="utf-8"))
+            assert "门窗" in saved
+
+
+class TestQuoteImportIntegration:
+    """报价导入集成测试"""
+
+    @pytest.mark.asyncio
+    async def test_import_clears_cache(self):
+        import sys
+        for key in ("max_system.tools.quote_tools",):
+            if key in sys.modules:
+                del sys.modules[key]
+
+        from max_system.tools import quote_tools
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quotes_path = Path(tmpdir) / "quotes"
+            quotes_path.mkdir(parents=True)
+
+            # 预加载旧缓存
+            old_data = {"旧类别": {"旧子类": [{"名称": "旧项目", "单价": 100}]}}
+            (quotes_path / "材料库.json").write_text(json.dumps(old_data, ensure_ascii=False), encoding="utf-8")
+            (quotes_path / "施工库.json").write_text("{}", encoding="utf-8")
+
+            quote_tools._loaded_path = None
+            quote_tools._materials_db = None
+            with patch.object(quote_tools, "_get_active_quotes_path", return_value=quotes_path):
+                quote_tools._ensure_loaded()
+                assert quote_tools._materials_db is not None
+                assert "旧类别" in quote_tools._materials_db
+
+            # 模拟导入清除缓存
+            quote_tools._loaded_path = None
+            quote_tools._materials_db = None
+
+            # 写入新数据
+            new_data = {"新类别": {"新子类": [{"名称": "新项目", "单价": 200}]}}
+            (quotes_path / "材料库.json").write_text(json.dumps(new_data, ensure_ascii=False), encoding="utf-8")
+
+            # 重新加载
+            with patch.object(quote_tools, "_get_active_quotes_path", return_value=quotes_path):
+                quote_tools._ensure_loaded()
+                assert "新类别" in quote_tools._materials_db
+                assert "旧类别" not in quote_tools._materials_db
+
+
 class TestKnowledgeTools:
     """知识库工具测试"""
 

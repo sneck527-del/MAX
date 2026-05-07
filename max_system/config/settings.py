@@ -59,6 +59,10 @@ class MaxSettings(BaseSettings):
     # 数据库（空值=项目根/data/max.db）
     db_path: Path = Path("")
 
+    # ARK Design 集成
+    ark_project_path: Path = Path(__file__).resolve().parent.parent.parent / "ark_design"
+    ark_node_path: str = "node"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     def _is_set(self, p: Path) -> bool:
