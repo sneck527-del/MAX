@@ -24,7 +24,7 @@ class TestSystemInit:
     @pytest.mark.asyncio
     async def test_orchestrator_initializes(self, orch):
         assert orch._initialized is True
-        assert len(orch._tools) == 48
+        assert len(orch._tools) == 56
 
     @pytest.mark.asyncio
     async def test_profile_manager_works(self, orch):

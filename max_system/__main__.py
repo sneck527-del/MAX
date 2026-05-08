@@ -238,11 +238,31 @@ async def _on_schedule_trigger(job: dict, feishu_api, orchestrator):
     """定时任务触发回调：通过飞书推送提醒"""
     chat_id = job.get("chat_id", "")
     description = job.get("description", "")
+    payload = job.get("payload", {})
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            payload = {}
+
+    reminder_type = payload.get("type", "")
 
     if chat_id:
         try:
-            msg = f"提醒：{description}"
-            await feishu_api.send_message(chat_id, msg)
+            if reminder_type == "morning_summary":
+                from max_system.integrations.proactive_reminder import generate_morning_summary
+                msg = generate_morning_summary()
+                if msg:
+                    await feishu_api.send_message(chat_id, msg)
+            elif reminder_type == "deadline_check":
+                from max_system.integrations.proactive_reminder import check_upcoming_deadlines, generate_deadline_text
+                reminders = check_upcoming_deadlines(days_ahead=1)
+                msg = generate_deadline_text(reminders)
+                if msg:
+                    await feishu_api.send_message(chat_id, msg)
+            else:
+                msg = f"提醒：{description}"
+                await feishu_api.send_message(chat_id, msg)
         except Exception as e:
             logging.getLogger(__name__).error("定时任务推送失败: %s", e)
 
@@ -298,6 +318,31 @@ async def _async_feishu():
         )
         await scheduler.start()
         print("  定时任务调度器已启动")
+
+        # 注册主动提醒周期性任务
+        notification_chat = settings.notification_chat_id
+        if notification_chat and job_store:
+            import json as _json
+            now_dt = datetime.now()
+            # 每日早报 — 明天早上 8:00
+            morning_time = now_dt.replace(hour=8, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            await job_store.add_job(
+                description="每日施工早报",
+                trigger_time=morning_time.isoformat(),
+                chat_id=notification_chat,
+                recurrence="1d",
+                payload={"type": "morning_summary"},
+            )
+            # 每日到期检查 — 明天早上 7:30
+            deadline_time = now_dt.replace(hour=7, minute=30, second=0, microsecond=0) + timedelta(days=1)
+            await job_store.add_job(
+                description="施工节点到期提醒",
+                trigger_time=deadline_time.isoformat(),
+                chat_id=notification_chat,
+                recurrence="1d",
+                payload={"type": "deadline_check"},
+            )
+            print("  主动提醒任务已注册（早报8:00 / 到期检查7:30）")
 
     # 已发送过引导卡片的 chat_id 集合
     _sent_onboarding_cards: set[str] = set()
@@ -440,6 +485,47 @@ async def _async_feishu():
                         logger.error("Excel导入失败: %s", e, exc_info=True)
                         await feishu_api.send_message(chat_id, f"导入失败: {e}")
                     return
+
+            # 图片消息：工地巡检拍照留底
+            image_key = payload.get("image_key", "")
+            if message_type == "image" and image_key:
+                try:
+                    from pathlib import Path as _Path
+                    photo_dir = _Path(settings.get_project_root()) / "data" / "construction" / "photos" / "inbox"
+                    photo_dir.mkdir(parents=True, exist_ok=True)
+                    img_bytes = await feishu_api.download_image(image_key)
+                    ext = ".jpg"
+                    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    photo_path = photo_dir / f"{ts}_{image_key[:8]}{ext}"
+                    photo_path.write_bytes(img_bytes)
+                    # 记录索引
+                    index_path = photo_dir.parent / "index.json"
+                    index_data = {"photos": []}
+                    if index_path.exists():
+                        try:
+                            import json as _json
+                            index_data = _json.loads(index_path.read_text("utf-8"))
+                        except (json.JSONDecodeError, OSError):
+                            index_data = {"photos": []}
+                    index_data["photos"].append({
+                        "path": str(photo_path.relative_to(photo_dir.parent)),
+                        "image_key": image_key,
+                        "timestamp": datetime.now().isoformat(),
+                        "project": "",
+                        "milestone": "",
+                        "chat_id": chat_id,
+                    })
+                    index_path.write_text(json.dumps(index_data, ensure_ascii=False, indent=2), encoding="utf-8")
+                    await feishu_api.send_message(
+                        chat_id,
+                        f"📸 照片已保存\n"
+                        f"如需关联到施工节点，可以告诉我项目名称和节点名称\n"
+                        f"例如：`把这张照片关联到张先生的闭水试验`"
+                    )
+                except Exception as e:
+                    logger.error("保存照片失败: %s", e, exc_info=True)
+                    await feishu_api.send_message(chat_id, "照片保存失败，请重试")
+                return
 
             # 首次使用：发送引导卡片
             if chat_id and chat_id not in _sent_onboarding_cards:

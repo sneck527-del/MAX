@@ -402,6 +402,34 @@ class FeishuApiClient:
             raise RuntimeError(f"下载文件失败: {data.get('msg', '')}")
         return resp.content
 
+    @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))
+    async def download_image(self, image_key: str) -> bytes:
+        """通过 image_key 下载飞书图片
+
+        Args:
+            image_key: 图片key（从图片消息的content中获取）
+
+        Returns:
+            bytes: 图片二进制内容
+        """
+        headers = await self._headers()
+        headers.pop("Content-Type", None)
+        # 飞书图片下载 API
+        resp = await self._http.get(
+            f"https://open.feishu.cn/open-apis/im/v1/images/{image_key}",
+            headers=headers,
+        )
+        resp.raise_for_status()
+        if resp.headers.get("content-type", "").startswith("application/json"):
+            data = resp.json()
+            if data.get("code") == 0 and "data" in data:
+                download_url = data["data"].get("url", "")
+                if download_url:
+                    dl_resp = await self._http.get(download_url)
+                    dl_resp.raise_for_status()
+                    return dl_resp.content
+        return resp.content
+
     # ============ 消息操作 ============
 
     @async_retry(max_retries=3, base_delay=1.0, exceptions=(httpx.HTTPError,))

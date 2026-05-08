@@ -18,11 +18,12 @@ def register_all_tools(settings: MaxSettings) -> list[tuple[str, callable, dict]
     from max_system.tools.project_tools import register_tools as reg_project
     from max_system.tools.reminder_tools import register_tools as reg_reminder
     from max_system.tools.ark_bridge import register_tools as reg_ark
+    from max_system.tools.construction_tools import register_tools as reg_construction
 
     tools = []
     for reg_fn in [reg_feishu, reg_knowledge, reg_quote,
                    reg_clientmgr, reg_sales, reg_service, reg_marketing,
                    reg_profile, reg_schedule, reg_document, reg_project,
-                   reg_reminder, reg_ark]:
+                   reg_reminder, reg_ark, reg_construction]:
         tools.extend(reg_fn(settings))
     return tools

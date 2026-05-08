@@ -306,34 +306,140 @@ async function generateNarrative(project, debateLog, onChunk, apiOpts) {
 }
 
 function parseNarrativeJSON(rawText) {
-  // Extract JSON from markdown code block ```json ... ```
+  // Step 1: extract JSON string from markdown code block or raw text
+  let jsonStr = '';
   const jsonMatch = rawText.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
-  const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawText.trim();
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim();
+  } else {
+    // No closing backtick: extract from ```json (or ```) to end of string
+    const openMatch = rawText.match(/```(?:json)?\s*\n?([\s\S]*)/);
+    if (openMatch) {
+      jsonStr = openMatch[1].trim();
+    } else {
+      // No code block at all: try raw text directly
+      jsonStr = rawText.trim();
+    }
+  }
 
+  if (!jsonStr) return [];
+
+  // Step 2: try parsing as-is
   try {
     const parsed = JSON.parse(jsonStr);
-    const pages = Array.isArray(parsed) ? parsed : (parsed.pages || []);
-    // Validate each page has required fields
-    return pages.filter(p => {
-      if (!p.id || !p.section || !p.pageType || !p.title) {
-        console.warn('  ⚠ 跳过无效页 (缺少必填字段):', p.id || 'unknown');
-        return false;
-      }
-      return true;
-    });
+    return validatePages(parsed);
   } catch (e) {
+    // Step 3: try repairing truncated JSON by balancing brackets
+    const repaired = repairJSON(jsonStr);
+    if (repaired !== jsonStr) {
+      try {
+        const parsed = JSON.parse(repaired);
+        console.warn('  ⚠ JSON已修复（截断补齐）');
+        return validatePages(parsed);
+      } catch (e2) { /* fall through */ }
+    }
+    // Step 4: try extracting individual objects with regex as last resort
+    const partialPages = extractPartialPages(jsonStr);
+    if (partialPages.length > 0) {
+      console.warn('  ⚠ JSON部分恢复: ' + partialPages.length + '页');
+      return partialPages;
+    }
     console.warn('  ⚠ JSON解析失败: ' + e.message.substring(0, 80));
     return [];
   }
 }
 
+/** Repair truncated JSON by removing incomplete trailing values and balancing brackets */
+function repairJSON(str) {
+  let s = str.trim();
+  if (!s) return '';
+  const pairs = { '{': '}', '[': ']' };
+  const stack = [];
+  let lastCompletePos = -1;
+
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '"' && (i === 0 || s[i - 1] !== '\\')) {
+      i++;
+      while (i < s.length) {
+        if (s[i] === '\\') i++;
+        else if (s[i] === '"') break;
+        i++;
+      }
+      continue;
+    }
+    if (s[i] === '{' || s[i] === '[') {
+      stack.push(s[i]);
+    } else if (s[i] === '}' || s[i] === ']') {
+      if (stack.length && s[i] === pairs[stack[stack.length - 1]]) {
+        stack.pop();
+      }
+    }
+    // After bracket processing: if back to depth<=1 after a } or ], mark as complete
+    if (stack.length <= 1 && (s[i] === '}' || s[i] === ']')) {
+      lastCompletePos = i;
+    }
+  }
+
+  if (lastCompletePos > 0) {
+    s = s.substring(0, lastCompletePos + 1);
+    // Recalculate stack for truncated version so we append correct closers
+    const newStack = [];
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === '"' && (i === 0 || s[i - 1] !== '\\')) {
+        i++;
+        while (i < s.length) {
+          if (s[i] === '\\') i++;
+          else if (s[i] === '"') break;
+          i++;
+        }
+        continue;
+      }
+      if (s[i] === '{' || s[i] === '[') newStack.push(s[i]);
+      else if (s[i] === '}' || s[i] === ']') {
+        if (newStack.length && s[i] === pairs[newStack[newStack.length - 1]]) newStack.pop();
+      }
+    }
+    const closers = [];
+    for (let i = newStack.length - 1; i >= 0; i--) closers.push(pairs[newStack[i]]);
+    return s + closers.join('');
+  }
+
+  return s;
+}
+
+/** Extract valid page objects from malformed JSON using regex */
+function extractPartialPages(str) {
+  const pages = [];
+  const pageRegex = /\{\s*"id"\s*:\s*"([^"]+)"\s*,[\s\S]*?"pageType"\s*:\s*"([^"]+)"[\s\S]*?\}(?=\s*[,}\]\s]|$)/g;
+  let match;
+  while ((match = pageRegex.exec(str)) !== null) {
+    try {
+      const candidate = match[0].replace(/,\s*$/, '') + '}';
+      const parsed = JSON.parse(candidate);
+      if (parsed.id && parsed.pageType) pages.push(parsed);
+    } catch (e) { /* skip invalid */ }
+  }
+  return pages;
+}
+
+function validatePages(parsed) {
+  const pages = Array.isArray(parsed) ? parsed : (parsed.pages || []);
+  return pages.filter(p => {
+    if (!p.id || !p.section || !p.pageType || !p.title) {
+      console.warn('  ⚠ 跳过无效页 (缺少必填字段):', p.id || 'unknown');
+      return false;
+    }
+    return true;
+  });
+}
+
 function enforcePageCount(pages, spaceType) {
   const limits = {
-    residential: { min: 35, max: 50 },
-    restaurant:  { min: 40, max: 55 },
-    hotel:       { min: 45, max: 62 },
-    exhibition:  { min: 35, max: 50 },
-    retail:      { min: 35, max: 45 },
+    residential: { min: 10, max: 50 },
+    restaurant:  { min: 10, max: 55 },
+    hotel:       { min: 10, max: 62 },
+    exhibition:  { min: 10, max: 50 },
+    retail:      { min: 10, max: 45 },
   };
   const lim = limits[spaceType] || { min: 35, max: 50 };
   const result = { pages: [...pages], adjustment: null };

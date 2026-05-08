@@ -1,0 +1,17 @@
+{
+  "spaceType": "exhibition",
+  "label": "展厅装修",
+  "totalDays": 45,
+  "milestones": [
+    { "phase": 1, "name": "开工交底", "days": 1, "deps": [], "tasks": ["现场交底", "材料进场"], "workers": ["项目经理", "设计师"] },
+    { "phase": 1, "name": "拆改工程", "days": 3, "deps": [0], "tasks": ["拆除", "新建墙体"], "workers": ["拆除工"] },
+    { "phase": 1, "name": "水电改造", "days": 4, "deps": [1], "tasks": ["强弱电布线", "展厅配电", "多媒体预埋"], "workers": ["水电工"] },
+    { "phase": 2, "name": "天地墙基础", "days": 7, "deps": [2], "tasks": ["地面找平", "吊顶安装", "墙面批灰"], "workers": ["瓦工", "木工"] },
+    { "phase": 2, "name": "展示造型制作", "days": 10, "deps": [3], "tasks": ["展墙制作", "展台制作", "灯箱制作", "金属结构"], "workers": ["木工", "焊工"] },
+    { "phase": 2, "name": "油漆/饰面", "days": 5, "deps": [4], "tasks": ["喷涂", "艺术涂料", "墙纸"], "workers": ["油漆工"] },
+    { "phase": 3, "name": "多媒体安装", "days": 5, "deps": [5], "tasks": ["屏幕安装", "投影调试", "音响系统", "互动装置"], "workers": ["多媒体工程队"] },
+    { "phase": 3, "name": "灯光安装", "days": 3, "deps": [6], "tasks": ["轨道灯安装", "射灯调试", "氛围灯带"], "workers": ["电工"] },
+    { "phase": 3, "name": "软装布展", "days": 4, "deps": [7], "tasks": ["展品摆放", "标识系统", "休息区布置"], "workers": ["布展团队"] },
+    { "phase": 3, "name": "竣工验收", "days": 1, "deps": [8], "tasks": ["整体验收", "灯光调试", "开放"], "workers": ["项目经理", "设计师", "客户"] }
+  ]
+}

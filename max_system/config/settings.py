@@ -59,6 +59,9 @@ class MaxSettings(BaseSettings):
     # 数据库（空值=项目根/data/max.db）
     db_path: Path = Path("")
 
+    # 主动提醒推送目标（设计师的飞书 chat_id，用于早晚报/到期提醒）
+    notification_chat_id: str = ""
+
     # ARK Design 集成
     ark_project_path: Path = Path(__file__).resolve().parent.parent.parent / "ark_design"
     ark_node_path: str = "node"

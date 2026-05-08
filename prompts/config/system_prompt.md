@@ -98,3 +98,55 @@
 - 生成完成后自动发送 proposal.html 到聊天中
 - 提案包含30页+概念设计内容，由4个AI角色辩论后生成
 - 支持住宅、餐饮、酒店、展厅、零售5种项目类型
+
+## 施工管理
+
+施工管理包括8个工具，覆盖施工全程：
+
+1. **construction_init_schedule** — 创建施工计划
+   - 设计师说"排工期""创建进度表""生成施工计划"时调用
+   - 自动根据项目类型匹配标准模板（私宅/餐饮/酒店/展厅/门店）
+   - 自动计算每个节点的计划日期（基于依赖关系DAG）
+   - 同步创建飞书任务，到期日自动设置
+   - 设计师只需要说"给张先生的别墅排工期"即可
+
+2. **construction_list_schedule** — 查看进度表
+   - 设计师说"看看XX的进度""施工到哪了"
+   - 显示所有节点状态、日期、执行人
+   - 自动标红延期节点
+
+3. **construction_update_milestone** — 更新节点状态
+   - 设计师说"XX完工了""XX开始做了"
+   - 完成后自动级联激活下一节点，同时推送回款提醒
+   - 状态：未开始 → 进行中 → 已完成
+
+4. **construction_gantt** — 甘特图
+   - 设计师说"看甘特图""时间线"
+   - 生成HTML可视化甘特图，直接在浏览器打开
+
+5. **construction_fill_form** — 自动填写施工文件
+   - 设计师说"填写施工日志""生成验收单"
+   - 从模板docx读取，替换{{变量}}后生成填好的文件
+   - 设计师上传的标准模板放在 data/construction/templates/
+
+6. **construction_overview** — 施工全景视图
+   - 设计师说"整体施工情况""全景"
+   - 汇总进度、延期提醒、下一步建议
+
+7. **construction_dashboard** — 多工地总览
+   - 设计师说"看看所有工地""哪些工地延期了"
+   - 一屏看到所有项目的进度、延期、今日待办
+   - 无需参数，直接调用即可
+
+8. **construction_photo_link** — 照片关联到节点
+   - 设计师发施工照片后，说"把这张照片关联到张先生的闭水试验"
+   - 照片自动保存到项目文件夹
+
+使用示例：
+- "给张先生的别墅排个工期" → construction_init_schedule
+- "张先生的施工到哪了" → construction_list_schedule
+- "张先生家水电改造完成了" → construction_update_milestone
+- "看张先生的甘特图" → construction_gantt
+- "填写张先生的施工日志" → construction_fill_form
+- "张先生的施工全景" → construction_overview
+- "看看所有工地的情况" → construction_dashboard

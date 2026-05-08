@@ -1,0 +1,17 @@
+{
+  "spaceType": "retail",
+  "label": "门店装修",
+  "totalDays": 35,
+  "milestones": [
+    { "phase": 1, "name": "开工交底", "days": 1, "deps": [], "tasks": ["现场交底", "材料进场"], "workers": ["项目经理", "设计师"] },
+    { "phase": 1, "name": "拆改工程", "days": 3, "deps": [0], "tasks": ["拆除", "新建墙体"], "workers": ["拆除工"] },
+    { "phase": 1, "name": "水电改造", "days": 4, "deps": [1], "tasks": ["强弱电布线", "收银系统预埋", "监控布线"], "workers": ["水电工"] },
+    { "phase": 2, "name": "天地墙基础", "days": 6, "deps": [2], "tasks": ["地面找平", "吊顶", "墙面批灰"], "workers": ["瓦工", "木工"] },
+    { "phase": 2, "name": "门头制作", "days": 5, "deps": [2], "tasks": ["门头钢结构", "招牌安装", "灯箱安装"], "workers": ["焊工", "广告安装队"] },
+    { "phase": 2, "name": "油漆/饰面", "days": 4, "deps": [3], "tasks": ["喷涂", "艺术涂料"], "workers": ["油漆工"] },
+    { "phase": 2, "name": "货架/陈列安装", "days": 5, "deps": [5], "tasks": ["货架安装", "陈列道具", "收银台安装"], "workers": ["安装工"] },
+    { "phase": 3, "name": "安装工程", "days": 3, "deps": [6], "tasks": ["灯具安装", "开关插座", "门禁系统"], "workers": ["电工"] },
+    { "phase": 3, "name": "软装摆场", "days": 2, "deps": [7], "tasks": ["家具进场", "装饰品", "绿植"], "workers": ["软装团队"] },
+    { "phase": 3, "name": "竣工验收", "days": 1, "deps": [8], "tasks": ["整体验收", "试营业准备"], "workers": ["项目经理", "设计师", "客户"] }
+  ]
+}

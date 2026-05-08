@@ -61,8 +61,8 @@ class TestToolRegistration:
         orch = MaxOrchestrator(MaxSettings())
         await orch.initialize()
 
-        assert len(orch._tools) == 48
-        assert len(orch._tool_defs) == 48
+        assert len(orch._tools) == 56
+        assert len(orch._tool_defs) == 56
 
     @pytest.mark.asyncio
     async def test_key_tool_groups_present(self):
